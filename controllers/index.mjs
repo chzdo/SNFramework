@@ -290,15 +290,15 @@ class CRUD {
         Object.assign(this.validations, props)
     }
 
-    registerRoutes({ otherRoutes, hide = [] }) {
-        !hide.includes("create") && Router.post(`/${this.controller}/create`, this.create, this.callback.insert || []);
-        !hide.includes("update") && Router.patch(`/${this.controller}/update/:id`, this.update, this.callback.update || []);
-        !hide.includes("get") && Router.get(`/${this.controller}/list`, this.fetch, this.callback.fetch || []);
-        !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, this.fetchOne, this.callback.fetchOne || []);
-        !hide.includes("delete") && Router.delete(`/${this.controller}/delete`, this.delete, this.callback.delete || []);
-        !hide.includes("deleteOne") && Router.delete(`/${this.controller}/delete/:id`, this.deleteOne, this.callback.deleteOne || []);
-        !hide.includes("export") && Router.get(`/${this.controller}/export`, this.export, this.callback.export || []);
-        !hide.includes("metrics") && Router.get(`/${this.controller}/metrics/:view`, this.view, this.callback.analysis || []);
+    registerRoutes({ otherRoutes, hide = [], middleware = {} }) {
+        !hide.includes("create") && Router.post(`/${this.controller}/create`, middleware?.create || [], this.create, this.callback.insert || []);
+        !hide.includes("update") && Router.patch(`/${this.controller}/update/:id`, middleware?.update || [], this.update, this.callback.update || []);
+        !hide.includes("get") && Router.get(`/${this.controller}/list`, middleware?.get || [], this.fetch, this.callback.fetch || []);
+        !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, middleware?.getOne || [], this.fetchOne, this.callback.fetchOne || []);
+        !hide.includes("delete") && Router.delete(`/${this.controller}/delete`, middleware?.delete || [], this.delete, this.callback.delete || []);
+        !hide.includes("deleteOne") && Router.delete(`/${this.controller}/delete/:id`, middleware?.deleteOne || [], this.deleteOne, this.callback.deleteOne || []);
+        !hide.includes("export") && Router.get(`/${this.controller}/export`, middleware?.export || [], this.export, this.callback.export || []);
+        !hide.includes("metrics") && Router.get(`/${this.controller}/metrics/:view`, middleware?.metrics || [], this.view, this.callback.analysis || []);
         if (otherRoutes) {
             Router.use(`/${this.controller}`, otherRoutes)
         }
