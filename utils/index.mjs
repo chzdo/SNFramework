@@ -96,14 +96,15 @@ const getOperator = (text) => {
 }
 //^\d{ 2, 4 } [-|\/]\d{2,4}[-|\/]\d{2,4}$
 const getValueType = (text) => {
-    console.log(text)
     if (/^(true|false)$/.test(text)) {
         return text === 'true'
     } else if (/^[0-9][\.\d]*(,\d+)?$/.test(text)) {
         return Number(text);
     } else if (/\w,/.test(text)) {
         return text.split(",")
-    } else if (/^\d{2,4}[-|\/]\d{2,4}[-|\/]\d{2,4}/.test(text)) {
+    } else if (/^(\w\?)+\.(\w)$/.test(text)) {
+        return text.split(",")
+    } else if (/^\d{2,4}[-|\/]\d{2,4}[-|\/]\d{2,4}$/.test(text)) {
         return new Date(text);
     }
     else {
@@ -111,7 +112,7 @@ const getValueType = (text) => {
     }
 }
 const buildMongoQuery = function (payload = {}) {
-    let { filter, page, limit, sort = '', ...rest } = payload;
+    let { filter, page, limit, sort = 'createdOn:-1', noSpinner, ...rest } = payload;
     let queryJson = {};
     let filterOptions = [];
     for (let key in rest) {
@@ -132,6 +133,15 @@ const buildMongoQuery = function (payload = {}) {
         const operator = getOperator(items)
         let [field, value] = items.split(operator);
         if (!value) continue;
+        if (field === "page") {
+            page = value
+            continue;
+        }
+        if (field === "limit") {
+            limit = value;
+            continue;
+        }
+
         queryJson[field] = {
             operator, value
         }
@@ -148,36 +158,11 @@ const buildMongoQuery = function (payload = {}) {
     for (let key in queryJson) {
         let { operator = "=", value } = queryJson[key];
         value = getValueType(value);
-        const tempValue = {};
+        let tempValue = {};
         if (operator === "=") {
-            if (Array.isArray(value)) {
-                tempValue[key] = {
-                    $in: value
-                }
-            } else if (value instanceof Date) {
-                let otherDate = new Date(value);
-                otherDate.setDate(value.getDate() + 1)
-                tempValue[key] = {
-                    $gte: value,
-                    $lt: otherDate
-                }
-            } else if (typeof value === "string" && value.includes(":")) {
-                const [firstValue, secondValue] = value.split(":");
-                if (firstValue && secondValue) {
-
-                    tempValue[key] = {
-                        $gte: firstValue,
-                        $lte: secondValue
-                    }
-                }
-            }
-            else if (typeof value === "string" && value.includes("~")) {
-                const [_, firstPart, word, lastPart] = /(~)?(\w+)(~)?/i.exec(value);
-                const regex = `${firstPart ? "^" : ""}${word}${lastPart ? "$" : ""}`
-                tempValue[key] = new RegExp(regex, "i")
-            }
-            else {
-                tempValue[key] = value
+            tempValue = {
+                ...tempValue,
+                ...getEqualQuery(key, value)
             }
         } else if (/>|</.test(operator)) {
             if (value instanceof Date || typeof value === "number") {
@@ -193,7 +178,6 @@ const buildMongoQuery = function (payload = {}) {
         sort = { [field]: sortOpt }
     }
     const filterOpts = filterOptions.length ? { [operatorValue]: filterOptions } : {};
-
     return { filter: filterOpts, sort, page, limit };
 }
 
@@ -203,16 +187,75 @@ const numericOps = {
     ">": "$gt",
     "<": "$lt"
 }
+const getRegex = (value) => {
+    const [_, firstPart, word, lastPart] = /(~)?(\w+( \w+)?)(~|\$)?/i.exec(value);
+    console.log(word)
+    let regex = '';
+    if (firstPart && lastPart === "$") {
+        regex = `^${word}$`
+    } else if (firstPart && !lastPart) {
+        regex = `^${word}`
+    } else {
+        regex = word;
+    }
+    return new RegExp(regex, "i")
+}
+const v = /^((\w+(\.(\w+))?)(\?)?){1,}(\^)(\:|\~)?(\w+( \w+)?)(\:|\~|\$)$/
+const getEqualQuery = (key, value) => {
+    let tempValue = {};
+    if (Array.isArray(value)) {
+        tempValue[key] = {
+            $in: value
+        }
+    } else if (value instanceof Date) {
+        let otherDate = new Date(value);
+        otherDate.setDate(value.getDate() + 1)
+        tempValue[key] = {
+            $gte: value,
+            $lt: otherDate
+        }
+    } else if (typeof value === "string" && v.test(value)) {
+        const [columns, values] = value.split("^");
+        tempValue["$or"] = [];
+        const tValue = getValueType(values)
+        console.log(tValue)
+        columns.split("?").forEach((col) => {
+            if (!col) return;
+            tempValue["$or"].push({
+                ...getEqualQuery(col, tValue)
+            })
+        })
+    } else if (typeof value === "string" && value.includes(":")) {
+        let [firstValue, secondValue] = value.split(":");
+        firstValue = getValueType(firstValue)
+        secondValue = getValueType(secondValue)
+        if (firstValue && secondValue) {
+            tempValue[key] = {
+                $gte: firstValue,
+                $lte: secondValue
+            }
+        }
+    }
+    else if (typeof value === "string" && value.includes("~")) {
+        tempValue[key] = getRegex(value)
+    }
+    else {
+        tempValue[key] = value
+    }
 
+    return tempValue
+}
 const buildQuery = function (payload) {
     return buildMongoQuery(payload)
 }
 
-const wrapper = function (callback) {
+const wrapper = function (callback, buildFilter = true) {
     return async function (req, res, next) {
         try {
             const { responseType, ...rest } = { ...req.query, ...req.params };
-            req.filter = buildQuery(req.query)
+            if (buildFilter) {
+                req.filter = buildQuery(req.query)
+            }
             const result = await callback(req, next);
 
             if (result.callNext) {
@@ -266,10 +309,71 @@ const request = {
     }
 }
 
+const aggregatePaging = (limit, page) => [
+    {
+        $facet:
+        {
+            paging: [
+                {
+                    $count: "totalCount",
+                },
+                {
+                    $addFields: {
+                        totalPages: {
+                            $ceil: {
+                                $divide: ["$totalCount", limit],
+                            },
+                        },
+                        currentPage: page,
+                    },
+                },
+            ],
+            data: [
+                {
+                    $skip: (page - 1) * limit,
+                },
+                {
+                    $limit: limit,
+                },
+            ],
+        },
+    },
+    {
+        $addFields:
+        {
+            paging: {
+                $cond: [
+                    {
+                        $eq: [
+                            {
+                                $size: "$paging",
+                            },
+                            0,
+                        ],
+                    },
+                    {
+                        totalCount: 0,
+                        currentPage: 1,
+                        totalPages: 0,
+                    },
+                    "$paging",
+                ],
+            },
+        },
+    },
+    {
+        $unwind:
+        {
+            path: "$paging",
+        },
+    },
+]
+
 
 
 export default {
     responseTransformer,
     wrapper,
-    request
+    request,
+    aggregatePaging
 }

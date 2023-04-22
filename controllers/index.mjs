@@ -35,6 +35,7 @@ class CRUD {
     }
     create = wrapper(async (req) => {
         try {
+
             const body = req.body;
             const { unique, create } = this.validations;
             const { insert: callback } = this.callback;
@@ -47,8 +48,8 @@ class CRUD {
                 }
             }
             if (where) {
-                Object.keys(opts).forEach(value => query[opts[value]] = req[where][value])
-                Object.keys(createVariables).forEach(value => body[createVariables[value]] = req[where][value])
+                Object.keys(opts).forEach(value => query[value] = req[where][opts[value]])
+                Object.keys(createVariables).forEach(value => body[value] = req[where][createVariables[value]])
             }
             if (unique) {
                 const value = body[unique];
@@ -94,8 +95,8 @@ class CRUD {
                 }
             }
             if (where) {
-                Object.keys(opts).forEach(value => query[opts[value]] = req[where][value])
-                Object.keys(updateOpts).forEach(value => data[updateOpts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => query[value] = req[where][opts[value]])
+                Object.keys(updateOpts).forEach(value => data[value] = req[where][updateOpts[value]])
             }
             data.modifiedOn = new Date();
             if (unique) {
@@ -125,14 +126,13 @@ class CRUD {
 
     fetch = wrapper(async (req) => {
         try {
-            const { filter, sort, page, limit } = req.filter;
+            const { filter, sort = 'createdOn:-1', page, limit } = req.filter;
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
-                Object.keys(opts).forEach(value => queryOpts[opts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const { get: callback } = this.callback;
-            console.log(filter)
             const query = await this.model.findAll({ query: { ...filter, isDeleted: false, ...queryOpts }, populateOptions: this.populateOptions, flat: this.flat, page, limit, sort });
             if (callback) {
                 return { callNext: true, result: query }
@@ -168,7 +168,7 @@ class CRUD {
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
-                Object.keys(opts).forEach(value => queryOpts[opts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const viewOn = this.modelInstance.getModel(view);
             const { analysis: callback } = this.callback;
@@ -200,7 +200,7 @@ class CRUD {
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
-                Object.keys(opts).forEach(value => queryOpts[opts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const query = await this.model.getOne({ query: { [this.#id]: id, ...filter, isDeleted: false, ...queryOpts }, populateOptions: this.populateOptions, flat: this.flat });
             if (!query?.data) {
@@ -233,7 +233,7 @@ class CRUD {
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
-                Object.keys(opts).forEach(value => queryOpts[opts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const query = await this.model.updateMany({ ...filter, ...queryOpts }, { isDeleted: true, isActive: false });
             if (callback) {
@@ -261,7 +261,7 @@ class CRUD {
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
-                Object.keys(opts).forEach(value => queryOpts[opts[value]] = req[where][value])
+                Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const query = await this.model.updateOne({ [this.#id]: id, ...queryOpts }, { isDeleted: true, isActive: false });
             if (callback) {
@@ -299,9 +299,15 @@ class CRUD {
         !hide.includes("deleteOne") && Router.delete(`/${this.controller}/delete/:id`, middleware?.deleteOne || [], this.deleteOne, this.callback.deleteOne || []);
         !hide.includes("export") && Router.get(`/${this.controller}/export`, middleware?.export || [], this.export, this.callback.export || []);
         !hide.includes("metrics") && Router.get(`/${this.controller}/metrics/:view`, middleware?.metrics || [], this.view, this.callback.analysis || []);
-        if (otherRoutes) {
-            Router.use(`/${this.controller}`, otherRoutes)
-        }
+
+        Router.use(`/${this.controller}`, otherRoutes || [], (req, res, next) => {
+            res.status(404).send({
+                success: false,
+                error: "path not found"
+            })
+        })
+
+
         return Router;
     }
 }
