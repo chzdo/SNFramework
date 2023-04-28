@@ -21,7 +21,7 @@ class Mailer {
         this.#mailer = nodemailer.createTransport(mg(auth));
     }
 
-    async sendMail({ from = this.FROM, subject, templateName, tags, to = [], attachments = [] }) {
+    async sendMail({ from = this.FROM, subject, templateName, tags, to = [], attachments = [], recipientVariable = {} }) {
         const { subject: subjectTemplate, body } = await this.getTemplates(templateName);
         subject = subject || subjectTemplate;
         const finalTags = {
@@ -32,7 +32,8 @@ class Mailer {
             subject: this.replaceTags(subject, finalTags),
             to: !ENV ? TEST_EMAIL : to,
             html: this.replaceTags(body, finalTags),
-            attachments
+            attachments,
+            'recipient-variables': JSON.stringify(recipientVariable)
         })
         if (!send) {
             return new Error(send);

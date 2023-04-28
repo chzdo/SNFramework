@@ -309,66 +309,68 @@ const request = {
     }
 }
 
-const aggregatePaging = (limit, page) => [
-    {
-        $facet:
+const aggregatePaging = (limit, page) => {
+    console.log(limit, page)
+    return [
         {
-            paging: [
-                {
-                    $count: "totalCount",
-                },
-                {
-                    $addFields: {
-                        totalPages: {
-                            $ceil: {
-                                $divide: ["$totalCount", limit],
+            $facet:
+            {
+                paging: [
+                    {
+                        $count: "totalCount",
+                    },
+                    {
+                        $addFields: {
+                            totalPages: {
+                                $ceil: {
+                                    $divide: ["$totalCount", limit],
+                                },
                             },
+                            currentPage: page,
                         },
-                        currentPage: page,
                     },
-                },
-            ],
-            data: [
-                {
-                    $skip: (page - 1) * limit,
-                },
-                {
-                    $limit: limit,
-                },
-            ],
-        },
-    },
-    {
-        $addFields:
-        {
-            paging: {
-                $cond: [
+                ],
+                data: [
                     {
-                        $eq: [
-                            {
-                                $size: "$paging",
-                            },
-                            0,
-                        ],
+                        $skip: (page - 1) * limit,
                     },
                     {
-                        totalCount: 0,
-                        currentPage: 1,
-                        totalPages: 0,
+                        $limit: limit,
                     },
-                    "$paging",
                 ],
             },
         },
-    },
-    {
-        $unwind:
         {
-            path: "$paging",
+            $addFields:
+            {
+                paging: {
+                    $cond: [
+                        {
+                            $eq: [
+                                {
+                                    $size: "$paging",
+                                },
+                                0,
+                            ],
+                        },
+                        {
+                            totalCount: 0,
+                            currentPage: 1,
+                            totalPages: 0,
+                        },
+                        "$paging",
+                    ],
+                },
+            },
         },
-    },
-]
-
+        {
+            $unwind:
+            {
+                path: "$paging",
+            },
+        },
+    ]
+}
 
 
 export default {
