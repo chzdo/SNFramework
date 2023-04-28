@@ -189,7 +189,6 @@ const numericOps = {
 }
 const getRegex = (value) => {
     const [_, firstPart, word, lastPart] = /(~)?(\w+( \w+)?)(~|\$)?/i.exec(value);
-    console.log(word)
     let regex = '';
     if (firstPart && lastPart === "$") {
         regex = `^${word}$`
@@ -218,7 +217,6 @@ const getEqualQuery = (key, value) => {
         const [columns, values] = value.split("^");
         tempValue["$or"] = [];
         const tValue = getValueType(values)
-        console.log(tValue)
         columns.split("?").forEach((col) => {
             if (!col) return;
             tempValue["$or"].push({
@@ -310,7 +308,6 @@ const request = {
 }
 
 const aggregatePaging = (limit, page) => {
-    console.log(limit, page)
     return [
         {
             $facet:

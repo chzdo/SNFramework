@@ -114,7 +114,6 @@ var autoIncrement = function (schema, options) {
                     next();
                 });
         } else {
-            console.log(`next`)
             next();
         }
     });
