@@ -12,13 +12,17 @@ class Mailer {
 
     constructor(props) {
         Object.assign(this, props)
-        const auth = {
+        const auth = props.HOST ? {
+            host: props.HOST,
+            port: props.PORT,
+            auth: props.AUTH
+        } : {
             auth: {
                 api_key: this.KEY,
                 domain: this.DOMAIN
             }
         }
-        this.#mailer = nodemailer.createTransport(mg(auth));
+        this.#mailer = props.HOST ? nodemailer.createTransport(auth) : nodemailer.createTransport(mg(auth));
     }
 
     async sendMail({ from = this.FROM, subject, templateName, tags, to = [], attachments = [], recipientVariable = {} }) {
@@ -27,6 +31,15 @@ class Mailer {
         const finalTags = {
             ...tags
         };
+        if (!ENV) {
+            to = TEST_EMAIL;
+            recipientVariable[TEST_EMAIL] = {
+                id: Object.keys(recipientVariable).length,
+                name: "TEST",
+                email: TEST_EMAIL
+            }
+        }
+
         const send = this.#mailer.sendMail({
             from,
             subject: this.replaceTags(subject, finalTags),

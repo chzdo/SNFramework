@@ -26,6 +26,7 @@
     "mongoose": "^7.0.0",
     "nodemailer": "^6.9.1",
     "nodemailer-mailgun-transport": "^2.1.5",
-    "rx": "^4.1.0"
+    "rx": "^4.1.0",
+    "tunnel-ssh": "^4.1.6"
   }
 }

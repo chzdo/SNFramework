@@ -70,6 +70,7 @@ const responseTransformer = async function (req, res, next) {
                 // if (data.length > 0) {
                 //   //  return res.send(toHtmlTable(data));
                 // }
+                return data
                 break;
             default:
                 return res.send(data);

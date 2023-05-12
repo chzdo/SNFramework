@@ -1,6 +1,6 @@
 import mongoose, { Model, model } from "mongoose";
 import rx from "rx";
-
+import tunnel from "tunnel-ssh";
 class mg {
     models = {}
     defaultModel = [{
@@ -15,12 +15,43 @@ class mg {
     }]
 
     constructor({ url, models = [], sshCredentials }) {
-        if (sshCredentials) {
-            //TODO
-        } else {
-            this.connection = mongoose.createConnection(url);
-        }
-        models = [...this.defaultModel, ...models];
+        this.url = url;
+        this.sshCredentials = sshCredentials;
+        this.initialModel = models
+        //  this.setupModels(models)
+
+
+        // while (!this.connection) { }
+
+    }
+
+    async getConnection() {
+        return new Promise((resolve, reject) => {
+            if (this.sshCredentials) {
+                tunnel(this.sshCredentials, (error, server) => {
+
+                    if (error) {
+                        console.log(error);
+                    }
+
+                    mongoose.connect(this.url);
+                    let db = mongoose.connection;
+                    db.on("error", console.error.bind(console, "DB connection error:"));
+                    db.once("open", function () {
+                        console.log(`Connected to database via tunnel...`);
+                        resolve(db)
+                    });
+                });
+            } else {
+                console.log(`here`)
+                resolve(mongoose.createConnection(this.url));
+            }
+        })
+    }
+
+    async setupModels(models) {
+        models = [...this.defaultModel, ...this.initialModel];
+        this.connection = await this.getConnection();
         for (let model of models) {
             const { name, schema, options, views, hooks, statics = {}, virtuals, indexes = [] } = model;
             if (name === "counters") {
@@ -189,7 +220,7 @@ const defaultStatics = {
         }
 
         if (sort) {
-            queryResult.sort(sort);
+            queryResult.collation({ locale: "en" }).sort(sort);
             countResult.sort(sort);
         }
         if (project) {

@@ -8,7 +8,7 @@ class framework {
     modelInstance
     constructor() { }
 
-    setMG({ url, models = [], sshCredentials = null }) {
+    async setMG({ url, models = [], sshCredentials = null }) {
         if (!url) {
             throw new Error(`mongo db url not defined`)
         }
@@ -16,6 +16,7 @@ class framework {
             throw new Error(`models not defined`)
         }
         this.mg = new mg({ url, sshCredentials, models })
+        await this.mg.setupModels()
         this.modelInstance = this.mg;
         return this;
 
@@ -42,11 +43,11 @@ class framework {
         // return this]];
     }
 
-    static setMailer({ KEY, DOMAIN, FROM }) {
-        if (!(KEY && DOMAIN)) {
+    static setMailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH }) {
+        if (!((KEY && DOMAIN) || (HOST && PORT && AUTH))) {
             throw Error(`mail credentials not set`)
         }
-        return new Mailer({ KEY, DOMAIN, FROM })
+        return new Mailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH })
     }
 
 }
