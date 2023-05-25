@@ -43,7 +43,6 @@ class mg {
                     });
                 });
             } else {
-                console.log(`here`)
                 resolve(mongoose.createConnection(this.url));
             }
         })
@@ -110,6 +109,7 @@ class mg {
                 })()
             }
         }
+        console.log(`DB Setup Completed!`)
     }
     getModel(name) {
         return this.connection.models[name];

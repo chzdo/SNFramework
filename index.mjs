@@ -2,6 +2,7 @@ import CRUD from "./controllers/index.mjs";
 import mg from "./controllers/mg.mjs"
 import utils from "./utils/index.mjs";
 import Mailer from "./controllers/mailers.mjs";
+import UploadFile from "./controllers/files.mjs";
 class framework {
     utils = utils
     static utils = utils
@@ -48,6 +49,10 @@ class framework {
             throw Error(`mail credentials not set`)
         }
         return new Mailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH })
+    }
+
+    fileUploader() {
+        return UploadFile
     }
 
 }

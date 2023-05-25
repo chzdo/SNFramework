@@ -370,10 +370,15 @@ const aggregatePaging = (limit, page) => {
     ]
 }
 
+const FILE_TYPES = {
+    CLOUDINARY: "cloudinary",
+    AZURE: 'azure'
+}
 
 export default {
     responseTransformer,
     wrapper,
     request,
-    aggregatePaging
+    aggregatePaging,
+    FILE_TYPES
 }
