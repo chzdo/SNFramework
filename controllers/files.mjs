@@ -29,16 +29,19 @@ const cloudUpload = function (file) {
 }
 
 const azureUpload = async function (file) {
+    const regex = /(.([a-z]+))$/gmi.exec(file.name)
     const uploadPath = `${UploadFile.folder}/${file.name}`;
     // create blobClient for container
     const blobClient = azure.getBlockBlobClient(uploadPath);
 
     // set mimetype as determined from browser with file upload control
-    const options = { blobHTTPHeaders: { blobContentType: file.type } };
+    const options = { blobHTTPHeaders: { blobContentType: file.mimetype } };
     // upload file
     await blobClient.uploadData(file.data, options);
     return {
         url: blobClient.url,
+        type: file.mimetype,
+        format: regex[2],
         secure_url: blobClient.url,
         filePath: uploadPath
     }

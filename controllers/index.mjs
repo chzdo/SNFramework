@@ -49,7 +49,17 @@ class CRUD {
             }
             if (where) {
                 Object.keys(opts).forEach(value => query[value] = req[where][opts[value]])
-                Object.keys(createVariables).forEach(value => body[value] = req[where][createVariables[value]])
+                Object.keys(createVariables).forEach(value => {
+                    if (value.includes(".")) {
+                        const [mainKey, subKey] = value.split(".")
+                        if (!body[mainKey]) {
+                            body[mainKey] = {}
+                        }
+                        body[mainKey][subKey] = req[where][createVariables[value]]
+                    } else {
+                        body[value] = req[where][createVariables[value]]
+                    }
+                })
             }
             if (unique) {
                 const value = body[unique];
