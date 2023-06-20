@@ -189,7 +189,8 @@ const numericOps = {
     "<": "$lt"
 }
 const getRegex = (value) => {
-    const [_, firstPart, word, lastPart] = /(~)?(\w+( \w+)?)(~|\$)?/i.exec(value);
+    let [_, firstPart, word, lastPart] = /(~)?([\w\s]+)(~|\$)?/i.exec(value);
+    word = word.trim();
     let regex = '';
     if (firstPart && lastPart === "$") {
         regex = `^${word}$`
@@ -200,7 +201,7 @@ const getRegex = (value) => {
     }
     return new RegExp(regex, "i")
 }
-const v = /^((\w+(\.(\w+))?)(\?)?){1,}(\^)(\:|\~)?(\w+( \w+)?)(\:|\~|\$)$/
+const v = /^\w+\??[\w\.?]+\^[\w\s]+(~|\$|\:)?$/
 const getEqualQuery = (key, value) => {
     let tempValue = {};
     if (Array.isArray(value)) {
