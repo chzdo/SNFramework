@@ -4,10 +4,11 @@ import handlebars from "handlebars";
 import fse from "fs-extra";
 import path from "path";
 const { ENV, TEST_EMAIL = "test@test.com" } = process.env;
-
+const subjectRegex = /<title>(.+)<\/title>/;
 class Mailer {
     #mailer
     templates = {}
+    useHandleBars = false;
     defaultTemplate = /\${((\w+)\.)?(\w+)}/g;
 
     constructor(props) {
@@ -23,14 +24,29 @@ class Mailer {
             }
         }
         this.#mailer = props.HOST ? nodemailer.createTransport(auth) : nodemailer.createTransport(mg(auth));
+        if (this.useHandleBars) {
+            fse.readdirSync('./mails/partials').forEach(async (file) => {
+                const parts = /(\w+).(hbs)/.exec(file);
+                const source = await fse.readFile(path.resolve(`./mails/partials/${file}`), "utf8");
+                handlebars.registerPartial(parts[1], source)
+            })
+            // fse.readFileSync()
+            // 
+        }
     }
 
-    async sendMail({ from = this.FROM, subject, templateName, tags, to = [], attachments = [], recipientVariable = {} }) {
-        const { subject: subjectTemplate, body } = await this.getTemplates(templateName);
+    async sendMail({ from = this.FROM, subject, templateName, tags = {}, to = [], attachments = [], recipientVariable = {} }) {
+        let { subject: subjectTemplate, body } = await this.getTemplates(templateName);
         subject = subject || subjectTemplate;
         const finalTags = {
             ...tags
         };
+
+        if (this.useHandleBars) {
+            body = body(Object.fromEntries(tags));
+        } else {
+            body = this.replaceTags(body, finalTags)
+        }
         if (!ENV) {
             to = TEST_EMAIL;
             recipientVariable[TEST_EMAIL] = {
@@ -39,12 +55,11 @@ class Mailer {
                 email: TEST_EMAIL
             }
         }
-
         const send = this.#mailer.sendMail({
             from,
             subject: this.replaceTags(subject, finalTags),
             to: !ENV ? TEST_EMAIL : to,
-            html: this.replaceTags(body, finalTags),
+            html: body,
             attachments,
             'recipient-variables': JSON.stringify(recipientVariable)
         })
@@ -55,12 +70,20 @@ class Mailer {
     }
 
     async getTemplates(templateName) {
-        const subjectRegex = /<title>(.+)<\/title>/;
+
         let template = this.templates[templateName];
         if (!template) {
-            const source = await fse.readFile(path.resolve(`./mails/${templateName}.html`), "utf8");
-            const subject = subjectRegex.exec(source)[1];
-            const body = source.replace(subjectRegex, "");
+            const fileName = this.useHandleBars ? `${templateName}.hbs` : `${templateName}.html`;
+            let source = await fse.readFile(path.resolve(`./mails/${fileName}`), "utf8");
+            let subject, body
+            if (this.useHandleBars) {
+                subject = subjectRegex.exec(source)[1];
+                body = handlebars.compile(source);
+                this.templates[templateName] = template;
+            } else {
+                subject = subjectRegex.exec(source)[1];
+                body = source.replace(subjectRegex, "");
+            }
             template = { subject, body };
             this.templates[templateName] = template;
         }

@@ -44,11 +44,11 @@ class framework {
         // return this]];
     }
 
-    static setMailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH }) {
+    static setMailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH, useHandleBars }) {
         if (!((KEY && DOMAIN) || (HOST && PORT && AUTH))) {
             throw Error(`mail credentials not set`)
         }
-        return new Mailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH })
+        return new Mailer({ KEY, DOMAIN, FROM, HOST, PORT, AUTH, useHandleBars })
     }
 
     fileUploader() {
