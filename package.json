@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/chzdo/SNFramework#readme",
   "dependencies": {
+    "@azure/service-bus": "^7.9.0",
     "@azure/storage-blob": "^12.14.0",
     "axios": "^1.3.4",
     "cloudinary": "^1.37.0",

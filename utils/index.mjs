@@ -113,7 +113,7 @@ const getValueType = (text) => {
     }
 }
 const buildMongoQuery = function (payload = {}) {
-    let { filter, page, limit, sort = 'createdOn:-1', noSpinner, ...rest } = payload;
+    let { filter, page, project, limit, sort = 'createdOn:-1', noSpinner, ...rest } = payload;
     let queryJson = {};
     let filterOptions = [];
     for (let key in rest) {
@@ -179,7 +179,7 @@ const buildMongoQuery = function (payload = {}) {
         sort = { [field]: sortOpt }
     }
     const filterOpts = filterOptions.length ? { [operatorValue]: filterOptions } : {};
-    return { filter: filterOpts, sort, page, limit };
+    return { filter: filterOpts, sort, page, limit, project };
 }
 
 const numericOps = {

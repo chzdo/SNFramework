@@ -25,24 +25,24 @@ class Mailer {
         }
         this.#mailer = props.HOST ? nodemailer.createTransport(auth) : nodemailer.createTransport(mg(auth));
         if (this.useHandleBars) {
+            this.defaultTemplate = /{{((\w+)\.)?(\w+)}}/g;
             fse.readdirSync('./mails/partials').forEach(async (file) => {
                 const parts = /(\w+).(hbs)/.exec(file);
                 const source = await fse.readFile(path.resolve(`./mails/partials/${file}`), "utf8");
                 handlebars.registerPartial(parts[1], source)
             })
-            // fse.readFileSync()
-            // 
         }
     }
 
     async sendMail({ from = this.FROM, subject, templateName, tags = {}, to = [], attachments = [], recipientVariable = {} }) {
         let { subject: subjectTemplate, body } = await this.getTemplates(templateName);
         subject = subject || subjectTemplate;
-        const finalTags = {
+        let finalTags = {
             ...tags
         };
 
         if (this.useHandleBars) {
+            finalTags = Object.fromEntries(tags)
             body = body(Object.fromEntries(tags));
         } else {
             body = this.replaceTags(body, finalTags)

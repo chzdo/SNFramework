@@ -136,14 +136,14 @@ class CRUD {
 
     fetch = wrapper(async (req) => {
         try {
-            const { filter, sort = 'createdOn:-1', page, limit } = req.filter;
+            const { filter, sort = 'createdOn:-1', page, limit, project } = req.filter;
             let queryOpts = {};
             const { where, query: opts = {} } = this.middlewareVariables;
             if (where) {
                 Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]])
             }
             const { get: callback } = this.callback;
-            const query = await this.model.findAll({ query: { ...filter, isDeleted: false, ...queryOpts }, populateOptions: this.populateOptions, flat: this.flat, page, limit, sort });
+            const query = await this.model.findAll({ query: { ...filter, isDeleted: false, ...queryOpts }, populateOptions: this.populateOptions, flat: this.flat, page, limit, sort, project });
             if (callback) {
                 return { callNext: true, result: query }
             }
@@ -303,8 +303,8 @@ class CRUD {
     registerRoutes({ otherRoutes, hide = [], middleware = {} }) {
         !hide.includes("create") && Router.post(`/${this.controller}/create`, middleware?.create || [], this.create, this.callback.insert || []);
         !hide.includes("update") && Router.patch(`/${this.controller}/update/:id`, middleware?.update || [], this.update, this.callback.update || []);
-        !hide.includes("get") && Router.get(`/${this.controller}/list`, middleware?.get || [], this.fetch, this.callback.fetch || []);
-        !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, middleware?.getOne || [], this.fetchOne, this.callback.fetchOne || []);
+        !hide.includes("get") && Router.get(`/${this.controller}/list`, middleware?.get || [], this.fetch, this.callback.get || []);
+        !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, middleware?.getOne || [], this.fetchOne, this.callback.getOne || []);
         !hide.includes("delete") && Router.delete(`/${this.controller}/delete`, middleware?.delete || [], this.delete, this.callback.delete || []);
         !hide.includes("deleteOne") && Router.delete(`/${this.controller}/delete/:id`, middleware?.deleteOne || [], this.deleteOne, this.callback.deleteOne || []);
         !hide.includes("export") && Router.get(`/${this.controller}/export`, middleware?.export || [], this.export, this.callback.export || []);
