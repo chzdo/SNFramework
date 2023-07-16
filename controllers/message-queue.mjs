@@ -49,12 +49,9 @@ class MessageQueue {
         }
         const receiver = this.client.createReceiver(this.queue);
         receiver.subscribe({
-            processMessage: handler,
-            processError: errorHandler
+            processMessage: handler(receiver),
+            processError: errorHandler(receiver)
         });
-
-        delay(2);
-        receiver.close()
     }
 }
 
