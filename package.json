@@ -1,6 +1,6 @@
 {
   "name": "snframework",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "framework for DB and other utilities",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,12 +9,13 @@
   },
   "exports": {
     "import": "./index.mjs",
-    "require": "./index.js"
+    "require": "./dist/index.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chzdo/SNFramework.git"
   },
+  "pre-push": [],
   "author": "Stanley Nduaguibe",
   "license": "ISC",
   "bugs": {
