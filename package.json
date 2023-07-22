@@ -2,9 +2,14 @@
   "name": "snframework",
   "version": "1.0.5",
   "description": "framework for DB and other utilities",
-  "main": "index.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel index.mjs  index.js",
+    "testbuild": "./node_modules/.bin/babel src -d dist --copy-files"
+  },
+  "exports": {
+    "import": "./index.mjs",
+    "require": "./index.js"
   },
   "repository": {
     "type": "git",
@@ -33,5 +38,12 @@
     "rx": "^4.1.0",
     "streamifier": "^0.1.1",
     "tunnel-ssh": "^4.1.6"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.22.9",
+    "@babel/core": "^7.22.9",
+    "@babel/plugin-transform-modules-commonjs": "^7.22.5",
+    "babel-plugin-cjs-esm-interop": "^3.0.2",
+    "babel-plugin-module-extension": "^0.1.3"
   }
 }
