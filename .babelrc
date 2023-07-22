@@ -1,0 +1,17 @@
+{
+    "test": "",
+    "plugins": [
+        [
+            "@babel/plugin-transform-modules-commonjs",
+            {
+                "format": "mjs"
+            }
+        ],
+        [
+            "module-extension",
+            {
+                "mjs": "js"
+            }
+        ]
+    ]
+}
