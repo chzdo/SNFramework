@@ -3,27 +3,33 @@ import { ServiceBusClient, delay, ServiceBusAdministrationClient } from "@azure/
 
 class MessageQueue {
     url = '';
+    adminUrl = '';
     queue = '';
     topic = ''
     defaultSubscription = 'no-filter'
     constructor({ URL, QUEUE, TOPIC, SUBSCRIPTION_CONFIG }) {
         this.url = URL;
         this.queue = QUEUE
+        this.topic = TOPIC;
+        this.subscriptionConfig = SUBSCRIPTION_CONFIG
         this.client = new ServiceBusClient(this.url);
-        //create admin subscriptions;
-        if (TOPIC) {
-            this.topic = TOPIC;
-            this.subscriptionConfig = SUBSCRIPTION_CONFIG
-            this.adminClient = new ServiceBusAdministrationClient(this.url);
-            this.#setup()
-        }
     }
 
-    async  #setup() {
-        await this.adminClient.createTopic(this.topic);
-        const params = [this.topic, this.subscriptionConfig?.name || this.defaultSubscription];
-        this.subscriptionConfig?.filter && (params.push(this.subscriptionConfig?.filter))
-        await this.adminClient.createSubscription(...params);
+    async setup({ topic, subscriptionConfig }) {
+        try {
+            const client = new ServiceBusAdministrationClient(this.url);
+            try {
+                await client.createTopic(topic);
+            } catch (e) {
+                console.log(e)
+            }
+            const params = [topic, subscriptionConfig?.name];
+            subscriptionConfig?.filter && (params.push(subscriptionConfig?.filter))
+            await client.createSubscription(...params);
+            return true;
+        } catch (e) {
+            return e.message
+        }
     }
 
     async addToQueue({ message }) {
