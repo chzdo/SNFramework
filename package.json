@@ -1,6 +1,6 @@
 {
   "name": "snframework",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "main": "./src/index.mjs",
   "description": "framework for DB and other utilities",
   "scripts": {
@@ -45,6 +45,8 @@
     "@babel/cli": "^7.22.9",
     "@babel/core": "^7.22.9",
     "@babel/plugin-transform-modules-commonjs": "^7.22.5",
+    "@babel/preset-env": "^7.22.9",
+    "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-cjs-esm-interop": "^3.0.2",
     "babel-plugin-module-extension": "^0.1.3"
   }
