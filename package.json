@@ -16,7 +16,6 @@
     "type": "git",
     "url": "git+https://github.com/chzdo/SNFramework.git"
   },
-  "pre-push": [],
   "author": "Stanley Nduaguibe",
   "license": "ISC",
   "bugs": {
