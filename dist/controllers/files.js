@@ -108,7 +108,6 @@ const UploadFile = {
       _cloudinary.default.config(options);
       this.selectedService = cloudUpload;
     } else {
-      console.log(_storageBlob, _streamifier, _cloudinary)
       azure = new _storageBlob.BlobServiceClient(options.url).getContainerClient(options.container);
       this.selectedService = azureUpload;
     }
