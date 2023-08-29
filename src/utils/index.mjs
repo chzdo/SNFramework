@@ -1,4 +1,5 @@
 import axios from "axios";
+import { codes } from "./http-errors.mjs";
 
 const mimeTypes = {
     json: 'application/json',
@@ -288,8 +289,8 @@ const makeRequest = async function ({ url, method, body, query, headers }) {
         console.log(err.message)
         return {
             success: false,
-            error: err?.response.data,
-            code: err.response.status
+            error: err?.response?.data,
+            code: err.response?.status
         }
     }
 
@@ -376,10 +377,51 @@ const FILE_TYPES = {
     AZURE: 'azure'
 }
 
+const middlewareVariables = {
+    where: "user",
+    create: { "companyID": "companyID", "createdBy": "userId" },
+    update: { "lastUpdatedBy": "userId" },
+    query: { "companyID": "companyID" },
+};
+
+function joiFormat(message) {
+    const regex = /["]+/g;
+    return message.replace(regex, '');
+}
+
+const getPayloadFromRoute = ({ query, values, where }) => {
+    let body = {};
+
+    Object.keys(query).forEach(value => body[value] = values[query[value]])
+    return body;
+}
+
+const getCreatePayloadFromRoute = ({ query, values }) => {
+    let body = {};
+    Object.keys(query).forEach(value => {
+        if (value.includes(".")) {
+            const [mainKey, subKey] = value.split(".");
+            if (!body[mainKey]) {
+                body[mainKey] = {};
+            }
+            body[mainKey][subKey] = values[query[value]];
+        } else {
+            body[value] = values[query[value]];
+        }
+    });
+    return body;
+}
+
 export default {
     responseTransformer,
     wrapper,
     request,
     aggregatePaging,
-    FILE_TYPES
+    FILE_TYPES,
+    routeVariables: middlewareVariables,
+    joiFormat,
+    codes,
+    getPayloadFromRoute,
+    getCreatePayloadFromRoute,
+    buildQuery
 }

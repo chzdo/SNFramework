@@ -62,13 +62,18 @@ class CRUD {
                 })
             }
             if (unique) {
-                const value = body[unique];
-                const recordCount = await this.model.isExist({ [unique]: value, ...query })
+                let recordCount;
+                let value
+                if (typeof unique === "function") {
+                    [recordCount, value] = await unique({ body, model: this.model, query })
+                } else {
+                    value = body[unique];
+                    recordCount = await this.model.isExist({ [unique]: value, ...query })
+                }
                 if (recordCount > 0) {
                     return {
                         code: 412, data: { error: `${value} already exist` }
                     }
-
                 }
             }
             const result = await this.model.create(body);
@@ -110,13 +115,18 @@ class CRUD {
             }
             data.modifiedOn = new Date();
             if (unique) {
-                const value = data[unique];
-                const recordCount = await this.model.isExist({ [unique]: value, [this.#id]: { $ne: id }, ...query })
+                let recordCount;
+                let value
+                if (typeof unique === "function") {
+                    [recordCount, value] = await unique({ body: data, model: this.model, query: { ...query, [this.#id]: { $ne: id } } })
+                } else {
+                    value = data[unique];
+                    recordCount = await this.model.isExist({ [unique]: value, [this.#id]: { $ne: id }, ...query })
+                }
                 if (recordCount > 0) {
                     return {
                         code: 412, data: { error: `${value} already exist` }
                     }
-
                 }
             }
             const result = await this.model.findOneAndUpdate({ [this.#id]: id, isDeleted: false, ...query }, data, { new: true });
