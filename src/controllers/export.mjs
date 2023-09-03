@@ -219,7 +219,7 @@ function createHTMLTable(data) {
 }
 
 
-const toPdfFile = async function ({ title = 'main', settings, stream, reportType = 'PDF' }) {
+const toPdfFile = async function ({ title = 'main', settings, stream, reportType = reportTypes.PDF }) {
   const tableHTML = createHTMLTable(settings);
   
   const pdfOptions = { format: 'A4' };
