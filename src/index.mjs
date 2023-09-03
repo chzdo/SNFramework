@@ -4,6 +4,7 @@ import utils from "./utils/index.mjs";
 import Mailer from "./controllers/mailers.mjs";
 import UploadFile from "./controllers/files.mjs";
 import MessageQueue from "./controllers/message-queue.mjs";
+import getFile from "./controllers/export.mjs";
 class framework {
     utils = utils
     static utils = utils
@@ -57,6 +58,9 @@ class framework {
         return UploadFile
     }
 
+    export({ config, reportType = defaultFileType,  title, stream, sheets, settings}) {     
+      return getFile({ config, reportType ,  title, stream, sheets, settings})
+    }
 }
 
 export default framework

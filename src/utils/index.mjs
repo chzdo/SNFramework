@@ -8,6 +8,13 @@ const mimeTypes = {
     xml: 'text/xml',
     html: 'text/html'
 };
+const types = {
+  EXCEL: 'excel',
+  CSV: 'csv',
+  JSON: 'json',
+  TXT: 'txt',
+  PDF: 'pdf'
+};
 
 const OPERATOR = "operator";
 
@@ -381,5 +388,6 @@ export default {
     wrapper,
     request,
     aggregatePaging,
-    FILE_TYPES
+    FILE_TYPES,
+    types
 }
