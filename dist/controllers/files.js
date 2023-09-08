@@ -51,6 +51,7 @@ const azureUpload = async function (file) {
   return {
     url: blobClient.url,
     type: file.mimetype,
+    name: file.name,
     format: regex[2],
     secure_url: blobClient.url,
     filePath: uploadPath
@@ -97,6 +98,8 @@ const uploadFile = _index.default.wrapper(async (req, res) => {
 });
 const UploadFile = {
   selectedService: null,
+  azureUpload,
+  cloudUpload,
   folder: null,
   setup: function ({
     type = _index.default.FILE_TYPES.AZURE,
