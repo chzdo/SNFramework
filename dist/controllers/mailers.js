@@ -34,6 +34,16 @@ class Mailer {
     };
     this.#mailer = props.HOST ? _nodemailer.default.createTransport(auth) : _nodemailer.default.createTransport((0, _nodemailerMailgunTransport.default)(auth));
     if (this.useHandleBars) {
+      _handlebars.default.registerHelper('toSentenceCase', function (str) {
+        return str.split(" ").map(v => {
+          const arr = v.toLowerCase().split("");
+          arr[0] = arr[0].toUpperCase();
+          return arr.join("");
+        }).join(" ");
+      });
+      _handlebars.default.registerHelper('hasLength', function (str) {
+        return str.length > 0;
+      });
       this.defaultTemplate = /{{((\w+)\.)?(\w+)}}/g;
       _fsExtra.default.readdirSync('./mails/partials').forEach(async file => {
         const parts = /(\w+).(hbs)/.exec(file);
