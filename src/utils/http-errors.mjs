@@ -36,7 +36,7 @@ export const codes = {
         CODE: 202,
         MESSAGE: "Operation accepted"
     },
-    ACCEPTED: {
+    NO_CONTENT: {
         CODE: 204,
         MESSAGE: "Resource updated "
     }

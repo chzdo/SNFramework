@@ -166,7 +166,7 @@ const buildMongoQuery = function (payload = {}) {
                 ...tempValue,
                 ...getEqualQuery(key, value)
             }
-        } else if (/>|</.test(operator)) {
+        } else if (/[><]/.test(operator)) {
             if (value instanceof Date || typeof value === "number") {
                 tempValue[key] = {
                     [numericOps[operator]]: value
