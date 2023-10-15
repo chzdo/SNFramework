@@ -177,7 +177,9 @@ var autoIncrement = function (schema, options) {
   schema.add(field);
   schema.pre("save", function (next) {
     var doc = this;
-    doc.createdOn = Date.now();
+    if (!doc.createdOn) {
+      doc.createdOn = Date.now();
+    }
     if (doc.db && doc.isNew && typeof doc[fieldName] === "undefined") {
       getNextSeqObservable(doc.db, doc.collection.name).retryWhen(err => {
         return err;
