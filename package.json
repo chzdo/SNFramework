@@ -1,6 +1,6 @@
 {
   "name": "snframework",
-  "version": "1.0.10",
+  "version": "1.1.0",
   "main": "./src/index.mjs",
   "description": "framework for DB and other utilities",
   "scripts": {
