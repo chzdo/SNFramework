@@ -13,7 +13,7 @@ class framework {
     appAuth = Authentication_Authorization
     constructor() { }
 
-    async setMG({ url, models = [], sshCredentials = null }) {
+    setMG({ url, models = [], sshCredentials = null }) {
         if (!url) {
             throw new Error(`mongo db url not defined`)
         }
@@ -21,7 +21,7 @@ class framework {
             throw new Error(`models not defined`)
         }
         this.mg = new mg({ url, sshCredentials, models })
-        await this.mg.setupModels()
+        this.mg.setupModels()
         this.modelInstance = this.mg;
         return this;
 
