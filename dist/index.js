@@ -19,7 +19,7 @@ class framework {
   MessageQueue = _messageQueue.default;
   appAuth = _auth.default;
   constructor() {}
-  async setMG({
+  setMG({
     url,
     models = [],
     sshCredentials = null
@@ -35,7 +35,7 @@ class framework {
       sshCredentials,
       models
     });
-    await this.mg.setupModels();
+    this.mg.setupModels();
     this.modelInstance = this.mg;
     return this;
   }

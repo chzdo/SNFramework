@@ -30,34 +30,14 @@ class mg {
     this.url = url;
     this.sshCredentials = sshCredentials;
     this.initialModel = models;
-    //  this.setupModels(models)
+    //this.setupModels(models)
 
     // while (!this.connection) { }
   }
 
-  async getConnection() {
-    return new Promise((resolve, reject) => {
-      if (this.sshCredentials) {
-        (0, _tunnelSsh.default)(this.sshCredentials, (error, server) => {
-          if (error) {
-            console.log(error);
-          }
-          _mongoose.default.connect(this.url);
-          let db = _mongoose.default.connection;
-          db.on("error", console.error.bind(console, "DB connection error:"));
-          db.once("open", function () {
-            console.log(`Connected to database via tunnel...`);
-            resolve(db);
-          });
-        });
-      } else {
-        resolve(_mongoose.default.createConnection(this.url));
-      }
-    });
-  }
-  async setupModels(models) {
+  setupModels(models) {
     models = [...this.defaultModel, ...this.initialModel];
-    this.connection = await this.getConnection();
+    this.connection = _mongoose.default.createConnection(this.url);
     for (let model of models) {
       const {
         name,
