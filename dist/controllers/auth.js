@@ -77,6 +77,7 @@ const Authentication_Authorization = {
           profileImgUrl: data.profileImgUrl || data.imageUrl,
           permissions: data.permissions,
           isEmployee,
+          companyData: data.companyData || data.companyID,
           isManager: data.employeeSubordinates?.length > 0,
           subordinates: data.employeeSubordinates,
           manager: data.employeeManager,
@@ -84,6 +85,7 @@ const Authentication_Authorization = {
           isMobileClient: AUTH_URL === finratusAPI,
           token
         };
+        req.company = data.companyData || data.companyID;
         next();
       },
       isEmployee: async function (req, res, next) {
