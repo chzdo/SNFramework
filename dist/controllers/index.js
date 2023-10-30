@@ -36,6 +36,25 @@ class CRUD {
     const regex = /["]+/g;
     return message.replace(regex, '');
   }
+  getVar({
+    where,
+    variable,
+    req
+  }) {
+    let body = {};
+    Object.keys(variable).forEach(value => {
+      if (value.includes(".")) {
+        const [mainKey, subKey] = value.split(".");
+        if (!body[mainKey]) {
+          body[mainKey] = {};
+        }
+        body[mainKey][subKey] = req[where][variable[value]];
+      } else {
+        body[value] = req[where][variable[value]];
+      }
+    });
+    return body;
+  }
   create = wrapper(async req => {
     try {
       const body = req.body;
@@ -154,7 +173,7 @@ class CRUD {
           }
         };
       }
-      const data = req.body;
+      let data = req.body;
       const {
         unique,
         update
@@ -177,8 +196,17 @@ class CRUD {
       }
       if (where) {
         Object.keys(opts).forEach(value => query[value] = req[where][opts[value]]);
-        Object.keys(updateOpts).forEach(value => data[value] = req[where][updateOpts[value]]);
+        data = {
+          ...data,
+          ...this.getVar({
+            variable: updateOpts,
+            where,
+            req
+          })
+        };
+        // Object.keys(updateOpts).forEach(value => data[value] = req[where][updateOpts[value]])
       }
+
       data.modifiedOn = new Date();
       if (unique) {
         let recordCount;
@@ -447,20 +475,29 @@ class CRUD {
       const {
         delete: callback
       } = this.callback;
+      let data = {};
       let queryOpts = {};
       const {
         where,
-        query: opts = {}
+        query: opts = {},
+        update: updateOpts = {}
       } = this.middlewareVariables;
       if (where) {
         Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]]);
+        data = this.getVar({
+          variable: updateOpts,
+          where,
+          req
+        });
       }
+      data.modifiedOn = new Date();
       const query = await this.model.updateMany({
         ...filter,
         ...queryOpts
       }, {
         isDeleted: true,
-        isActive: false
+        isActive: false,
+        ...data
       });
       if (callback) {
         return {
@@ -501,19 +538,28 @@ class CRUD {
         deleteOne: callback
       } = this.callback;
       let queryOpts = {};
+      let data = {};
       const {
         where,
-        query: opts = {}
+        query: opts = {},
+        update: updateOpts = {}
       } = this.middlewareVariables;
       if (where) {
         Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]]);
+        data = this.getVar({
+          variable: updateOpts,
+          where,
+          req
+        });
       }
+      data.modifiedOn = new Date();
       const query = await this.model.updateOne({
         [this.#id]: id,
         ...queryOpts
       }, {
         isDeleted: true,
-        isActive: false
+        isActive: false,
+        ...data
       });
       if (callback) {
         return {
