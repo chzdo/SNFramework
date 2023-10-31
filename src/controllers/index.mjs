@@ -107,6 +107,63 @@ class CRUD {
         }
     })
 
+    createMany = wrapper(async (req) => {
+        try {
+
+            let body = req.body;
+            const { uniqueMany, createMany } = this.validations;
+            const { insert: callback } = this.callback;
+            let query = {};
+            const { where, create: createVariables = {}, query: opts = {} } = this.middlewareVariables;
+            if (createMany) {
+                const { error } = createMany.validate(body);
+                if (error) {
+                    return { code: 412, data: { error: this.joiFormat(error.details[0]?.message) } }
+                }
+            }
+            if (where) {
+                Object.keys(opts).forEach(value => query[value] = req[where][opts[value]])
+                let data = {};
+                Object.keys(createVariables).forEach(value => {
+                    if (value.includes(".")) {
+                        const [mainKey, subKey] = value.split(".")
+                        if (!data[mainKey]) {
+                            data[mainKey] = {}
+                        }
+                        data[mainKey][subKey] = req[where][createVariables[value]]
+                    } else {
+                        data[value] = req[where][createVariables[value]]
+                    }
+                })
+
+                body = body.map((body) => ({ ...body, ...data }))
+            }
+            if (uniqueMany) {
+                let recordCount;
+                let msg
+                if (typeof uniqueMany === "function") {
+                    [recordCount, msg] = await uniqueMany({ body, model: this.model, query })
+                    if (recordCount > 0) {
+                        return {
+                            code: 412, data: { error: msg }
+                        }
+                    }
+                }
+            }
+            const result = await this.model.create(body);
+            if (callback) {
+                return { callNext: true, result }
+            }
+            return { code: 201, data: { data: result } }
+        } catch (e) {
+            console.error(e);
+            if (e.code) {
+                return { code: 400, data: { error: e.error } }
+            }
+            return { code: 500, data: { error: "server error" } }
+        }
+    })
+
     update = wrapper(async (req) => {
         try {
             const { id } = req.params;
@@ -336,6 +393,7 @@ class CRUD {
 
     registerRoutes({ otherRoutes, hide = [], middleware = {} }) {
         !hide.includes("create") && Router.post(`/${this.controller}/create`, middleware?.create || [], this.create, this.callback.insert || []);
+        !hide.includes("createMany") && Router.post(`/${this.controller}/createMany`, middleware?.create || [], this.createMany, this.callback.insert || []);
         !hide.includes("update") && Router.patch(`/${this.controller}/update/:id`, middleware?.update || [], this.update, this.callback.update || []);
         !hide.includes("get") && Router.get(`/${this.controller}/list`, middleware?.get || [], this.fetch, this.callback.get || []);
         !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, middleware?.getOne || [], this.fetchOne, this.callback.getOne || []);
