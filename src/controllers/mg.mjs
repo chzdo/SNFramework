@@ -31,7 +31,7 @@ class mg {
         models = [...this.defaultModel, ...this.initialModel];
         this.connection = mongoose.createConnection(this.url)
         for (let model of models) {
-            const { name, schema, options, views, hooks, statics = {}, virtuals, indexes = [], useAutoIncrement = true } = model;
+            const { name, schema, options, views, hooks, statics = {}, virtuals, indexes = [] } = model;
             if (name === "counters") {
                 this.connection.model(name, mongoose.Schema(schema));
                 continue;
@@ -66,9 +66,7 @@ class mg {
             }
             schemaCX.add({ id: { type: Number, index: true, unique: true } });
 
-            if (useAutoIncrement) {
-                schemaCX.plugin(autoIncrement, { field: "id" });
-            }
+            schemaCX.plugin(autoIncrement, { field: "id" });
             schemaCX.plugin(checkUpdate, {});
             //create model
             this.connection.model(name, schemaCX, name);
