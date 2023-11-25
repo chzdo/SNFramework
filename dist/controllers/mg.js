@@ -47,7 +47,8 @@ class mg {
         hooks,
         statics = {},
         virtuals,
-        indexes = []
+        indexes = [],
+        useAutoIncrement = true
       } = model;
       if (name === "counters") {
         this.connection.model(name, _mongoose.default.Schema(schema));
@@ -90,9 +91,11 @@ class mg {
           unique: true
         }
       });
-      schemaCX.plugin(autoIncrement, {
-        field: "id"
-      });
+      if (useAutoIncrement) {
+        schemaCX.plugin(autoIncrement, {
+          field: "id"
+        });
+      }
       schemaCX.plugin(checkUpdate, {});
       //create model
       this.connection.model(name, schemaCX, name);
