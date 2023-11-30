@@ -237,6 +237,15 @@ const getEqualQuery = (key, value) => {
             }
         }
     }
+    else if (typeof value === "string" && value.includes("|")) {
+        let [operator, numb] = value.split("|");
+        numb = getValueType(numb)
+        if (operator && numb) {
+            tempValue[key] = {
+                [`$${operator}`]: numb,
+            }
+        }
+    }
     else if (typeof value === "string" && value.includes("~")) {
         tempValue[key] = getRegex(value)
     }

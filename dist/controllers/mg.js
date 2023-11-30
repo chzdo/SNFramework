@@ -84,18 +84,10 @@ class mg {
           schemaCX.index(indexField, indexOptions);
         }
       }
-      if (useAutoIncrement) {
-        schemaCX.add({
-          id: {
-            type: Number,
-            index: true,
-            unique: true
-          }
-        });
-        schemaCX.plugin(autoIncrement, {
-          field: "id"
-        });
-      }
+      schemaCX.plugin(autoIncrement, {
+        field: "id",
+        useAutoIncrement
+      });
       schemaCX.plugin(checkUpdate, {});
       //create model
       this.connection.model(name, schemaCX, name);
@@ -124,11 +116,6 @@ class mg {
 }
 var autoIncrement = function (schema, options) {
   var field = {
-    _id: {
-      type: Number,
-      index: true,
-      unique: true
-    },
     createdOn: {
       type: Date,
       default: Date.now
@@ -149,15 +136,15 @@ var autoIncrement = function (schema, options) {
 
   // swith to options field
   var fieldName = getField(options);
-  if (fieldName !== "_id") {
+  if (fieldName !== "_id" && options.useAutoIncrement) {
     field[getField(options)] = {
       type: Number,
       index: true,
       unique: true
     };
-    delete field._id;
   }
   schema.add(field);
+  if (!options.useAutoIncrement) return;
   schema.pre("save", function (next) {
     var doc = this;
     if (!doc.createdOn) {
