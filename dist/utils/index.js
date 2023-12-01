@@ -94,8 +94,6 @@ const getOperator = text => {
     return "<";
   } else if (/\w(>)\w/.test(text)) {
     return ">";
-  } else if (/\w(is)\w/.test(text)) {
-    return "is";
   } else {
     return "=";
   }
