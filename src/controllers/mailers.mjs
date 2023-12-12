@@ -25,6 +25,16 @@ class Mailer {
         }
         this.#mailer = props.HOST ? nodemailer.createTransport(auth) : nodemailer.createTransport(mg(auth));
         if (this.useHandleBars) {
+            handlebars.registerHelper('toSentenceCase', function (str) {
+                return str.split(" ").map(v => {
+                    const arr = v.toLowerCase().split("");
+                    arr[0] = arr[0].toUpperCase();
+                    return arr.join("")
+                }).join(" ")
+            });
+            handlebars.registerHelper('hasLength', function (str) {
+                return str.length > 0
+            });
             this.defaultTemplate = /{{((\w+)\.)?(\w+)}}/g;
             fse.readdirSync('./mails/partials').forEach(async (file) => {
                 const parts = /(\w+).(hbs)/.exec(file);

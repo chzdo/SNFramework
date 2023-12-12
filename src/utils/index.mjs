@@ -1,4 +1,5 @@
 import axios from "axios";
+import { codes } from "./http-errors.mjs";
 
 const mimeTypes = {
     json: 'application/json',
@@ -9,11 +10,11 @@ const mimeTypes = {
     html: 'text/html'
 };
 const types = {
-  EXCEL: 'excel',
-  CSV: 'csv',
-  JSON: 'json',
-  TXT: 'txt',
-  PDF: 'pdf'
+    EXCEL: 'excel',
+    CSV: 'csv',
+    JSON: 'json',
+    TXT: 'txt',
+    PDF: 'pdf'
 };
 
 const OPERATOR = "operator";
@@ -96,8 +97,6 @@ const getOperator = (text) => {
         return "<"
     } else if (/\w(>)\w/.test(text)) {
         return ">"
-    } else if (/\w(is)\w/.test(text)) {
-        return "is"
     } else {
         return "="
     }
@@ -172,7 +171,7 @@ const buildMongoQuery = function (payload = {}) {
                 ...tempValue,
                 ...getEqualQuery(key, value)
             }
-        } else if (/>|</.test(operator)) {
+        } else if (/[><]/.test(operator)) {
             if (value instanceof Date || typeof value === "number") {
                 tempValue[key] = {
                     [numericOps[operator]]: value
@@ -243,6 +242,15 @@ const getEqualQuery = (key, value) => {
             }
         }
     }
+    else if (typeof value === "string" && value.includes("|")) {
+        let [operator, numb] = value.split("|");
+        numb = getValueType(numb)
+        if (operator && numb) {
+            tempValue[key] = {
+                [`$${operator}`]: numb,
+            }
+        }
+    }
     else if (typeof value === "string" && value.includes("~")) {
         tempValue[key] = getRegex(value)
     }
@@ -295,8 +303,8 @@ const makeRequest = async function ({ url, method, body, query, headers }) {
         console.log(err.message)
         return {
             success: false,
-            error: err?.response.data,
-            code: err.response.status
+            error: err?.response?.data,
+            code: err.response?.status
         }
     }
 
@@ -383,11 +391,52 @@ const FILE_TYPES = {
     AZURE: 'azure'
 }
 
+const middlewareVariables = {
+    where: "user",
+    create: { "companyID": "companyID", "createdBy": "userId" },
+    update: { "lastUpdatedBy": "userId" },
+    query: { "companyID": "companyID" },
+};
+
+function joiFormat(message) {
+    const regex = /["]+/g;
+    return message.replace(regex, '');
+}
+
+const getPayloadFromRoute = ({ query, values, where }) => {
+    let body = {};
+
+    Object.keys(query).forEach(value => body[value] = values[query[value]])
+    return body;
+}
+
+const getCreatePayloadFromRoute = ({ query, values }) => {
+    let body = {};
+    Object.keys(query).forEach(value => {
+        if (value.includes(".")) {
+            const [mainKey, subKey] = value.split(".");
+            if (!body[mainKey]) {
+                body[mainKey] = {};
+            }
+            body[mainKey][subKey] = values[query[value]];
+        } else {
+            body[value] = values[query[value]];
+        }
+    });
+    return body;
+}
+
 export default {
     responseTransformer,
     wrapper,
     request,
     aggregatePaging,
     FILE_TYPES,
-    types
+    types,
+    routeVariables: middlewareVariables,
+    joiFormat,
+    codes,
+    getPayloadFromRoute,
+    getCreatePayloadFromRoute,
+    buildQuery
 }

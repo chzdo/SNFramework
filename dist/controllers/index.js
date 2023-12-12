@@ -36,6 +36,25 @@ class CRUD {
     const regex = /["]+/g;
     return message.replace(regex, '');
   }
+  getVar({
+    where,
+    variable,
+    req
+  }) {
+    let body = {};
+    Object.keys(variable).forEach(value => {
+      if (value.includes(".")) {
+        const [mainKey, subKey] = value.split(".");
+        if (!body[mainKey]) {
+          body[mainKey] = {};
+        }
+        body[mainKey][subKey] = req[where][variable[value]];
+      } else {
+        body[value] = req[where][variable[value]];
+      }
+    });
+    return body;
+  }
   create = wrapper(async req => {
     try {
       const body = req.body;
@@ -80,11 +99,21 @@ class CRUD {
         });
       }
       if (unique) {
-        const value = body[unique];
-        const recordCount = await this.model.isExist({
-          [unique]: value,
-          ...query
-        });
+        let recordCount;
+        let value;
+        if (typeof unique === "function") {
+          [recordCount, value] = await unique({
+            body,
+            model: this.model,
+            query
+          });
+        } else {
+          value = body[unique];
+          recordCount = await this.model.isExist({
+            [unique]: value,
+            ...query
+          });
+        }
         if (recordCount > 0) {
           return {
             code: 412,
@@ -92,6 +121,104 @@ class CRUD {
               error: `${value} already exist`
             }
           };
+        }
+      }
+      const result = await this.model.create(body);
+      if (callback) {
+        return {
+          callNext: true,
+          result
+        };
+      }
+      return {
+        code: 201,
+        data: {
+          data: result
+        }
+      };
+    } catch (e) {
+      console.error(e);
+      if (e.code) {
+        return {
+          code: 400,
+          data: {
+            error: e.error
+          }
+        };
+      }
+      return {
+        code: 500,
+        data: {
+          error: "server error"
+        }
+      };
+    }
+  });
+  createMany = wrapper(async req => {
+    try {
+      let body = req.body;
+      const {
+        uniqueMany,
+        createMany
+      } = this.validations;
+      const {
+        insert: callback
+      } = this.callback;
+      let query = {};
+      const {
+        where,
+        create: createVariables = {},
+        query: opts = {}
+      } = this.middlewareVariables;
+      if (createMany) {
+        const {
+          error
+        } = createMany.validate(body);
+        if (error) {
+          return {
+            code: 412,
+            data: {
+              error: this.joiFormat(error.details[0]?.message)
+            }
+          };
+        }
+      }
+      if (where) {
+        Object.keys(opts).forEach(value => query[value] = req[where][opts[value]]);
+        let data = {};
+        Object.keys(createVariables).forEach(value => {
+          if (value.includes(".")) {
+            const [mainKey, subKey] = value.split(".");
+            if (!data[mainKey]) {
+              data[mainKey] = {};
+            }
+            data[mainKey][subKey] = req[where][createVariables[value]];
+          } else {
+            data[value] = req[where][createVariables[value]];
+          }
+        });
+        body = body.map(body => ({
+          ...body,
+          ...data
+        }));
+      }
+      if (uniqueMany) {
+        let recordCount;
+        let msg;
+        if (typeof uniqueMany === "function") {
+          [recordCount, msg] = await uniqueMany({
+            body,
+            model: this.model,
+            query
+          });
+          if (recordCount > 0) {
+            return {
+              code: 412,
+              data: {
+                error: msg
+              }
+            };
+          }
         }
       }
       const result = await this.model.create(body);
@@ -144,7 +271,7 @@ class CRUD {
           }
         };
       }
-      const data = req.body;
+      let data = req.body;
       const {
         unique,
         update
@@ -167,18 +294,42 @@ class CRUD {
       }
       if (where) {
         Object.keys(opts).forEach(value => query[value] = req[where][opts[value]]);
-        Object.keys(updateOpts).forEach(value => data[value] = req[where][updateOpts[value]]);
+        data = {
+          ...data,
+          ...this.getVar({
+            variable: updateOpts,
+            where,
+            req
+          })
+        };
+        // Object.keys(updateOpts).forEach(value => data[value] = req[where][updateOpts[value]])
       }
+
       data.modifiedOn = new Date();
       if (unique) {
-        const value = data[unique];
-        const recordCount = await this.model.isExist({
-          [unique]: value,
-          [this.#id]: {
-            $ne: id
-          },
-          ...query
-        });
+        let recordCount;
+        let value;
+        if (typeof unique === "function") {
+          [recordCount, value] = await unique({
+            body: data,
+            model: this.model,
+            query: {
+              ...query,
+              [this.#id]: {
+                $ne: id
+              }
+            }
+          });
+        } else {
+          value = data[unique];
+          recordCount = await this.model.isExist({
+            [unique]: value,
+            [this.#id]: {
+              $ne: id
+            },
+            ...query
+          });
+        }
         if (recordCount > 0) {
           return {
             code: 412,
@@ -422,20 +573,29 @@ class CRUD {
       const {
         delete: callback
       } = this.callback;
+      let data = {};
       let queryOpts = {};
       const {
         where,
-        query: opts = {}
+        query: opts = {},
+        update: updateOpts = {}
       } = this.middlewareVariables;
       if (where) {
         Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]]);
+        data = this.getVar({
+          variable: updateOpts,
+          where,
+          req
+        });
       }
+      data.modifiedOn = new Date();
       const query = await this.model.updateMany({
         ...filter,
         ...queryOpts
       }, {
         isDeleted: true,
-        isActive: false
+        isActive: false,
+        ...data
       });
       if (callback) {
         return {
@@ -476,19 +636,28 @@ class CRUD {
         deleteOne: callback
       } = this.callback;
       let queryOpts = {};
+      let data = {};
       const {
         where,
-        query: opts = {}
+        query: opts = {},
+        update: updateOpts = {}
       } = this.middlewareVariables;
       if (where) {
         Object.keys(opts).forEach(value => queryOpts[value] = req[where][opts[value]]);
+        data = this.getVar({
+          variable: updateOpts,
+          where,
+          req
+        });
       }
+      data.modifiedOn = new Date();
       const query = await this.model.updateOne({
         [this.#id]: id,
         ...queryOpts
       }, {
         isDeleted: true,
-        isActive: false
+        isActive: false,
+        ...data
       });
       if (callback) {
         return {
@@ -530,6 +699,7 @@ class CRUD {
     middleware = {}
   }) {
     !hide.includes("create") && Router.post(`/${this.controller}/create`, middleware?.create || [], this.create, this.callback.insert || []);
+    !hide.includes("createMany") && Router.post(`/${this.controller}/createMany`, middleware?.create || [], this.createMany, this.callback.insert || []);
     !hide.includes("update") && Router.patch(`/${this.controller}/update/:id`, middleware?.update || [], this.update, this.callback.update || []);
     !hide.includes("get") && Router.get(`/${this.controller}/list`, middleware?.get || [], this.fetch, this.callback.get || []);
     !hide.includes("getOne") && Router.get(`/${this.controller}/list/:id`, middleware?.getOne || [], this.fetchOne, this.callback.getOne || []);

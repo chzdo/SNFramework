@@ -10,14 +10,16 @@ var _index2 = _interopRequireDefault(require("./utils/index.js"));
 var _mailers = _interopRequireDefault(require("./controllers/mailers.js"));
 var _files = _interopRequireDefault(require("./controllers/files.js"));
 var _messageQueue = _interopRequireDefault(require("./controllers/message-queue.js"));
+var _auth = _interopRequireDefault(require("./controllers/auth.js"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 class framework {
   utils = _index2.default;
   static utils = _index2.default;
   modelInstance;
   MessageQueue = _messageQueue.default;
+  appAuth = _auth.default;
   constructor() {}
-  async setMG({
+  setMG({
     url,
     models = [],
     sshCredentials = null
@@ -33,7 +35,7 @@ class framework {
       sshCredentials,
       models
     });
-    await this.mg.setupModels();
+    this.mg.setupModels();
     this.modelInstance = this.mg;
     return this;
   }

@@ -30,34 +30,14 @@ class mg {
     this.url = url;
     this.sshCredentials = sshCredentials;
     this.initialModel = models;
-    //  this.setupModels(models)
+    //this.setupModels(models)
 
     // while (!this.connection) { }
   }
 
-  async getConnection() {
-    return new Promise((resolve, reject) => {
-      if (this.sshCredentials) {
-        (0, _tunnelSsh.default)(this.sshCredentials, (error, server) => {
-          if (error) {
-            console.log(error);
-          }
-          _mongoose.default.connect(this.url);
-          let db = _mongoose.default.connection;
-          db.on("error", console.error.bind(console, "DB connection error:"));
-          db.once("open", function () {
-            console.log(`Connected to database via tunnel...`);
-            resolve(db);
-          });
-        });
-      } else {
-        resolve(_mongoose.default.createConnection(this.url));
-      }
-    });
-  }
-  async setupModels(models) {
+  setupModels(models) {
     models = [...this.defaultModel, ...this.initialModel];
-    this.connection = await this.getConnection();
+    this.connection = _mongoose.default.createConnection(this.url);
     for (let model of models) {
       const {
         name,
@@ -67,7 +47,8 @@ class mg {
         hooks,
         statics = {},
         virtuals,
-        indexes = []
+        indexes = [],
+        useAutoIncrement = true
       } = model;
       if (name === "counters") {
         this.connection.model(name, _mongoose.default.Schema(schema));
@@ -103,15 +84,9 @@ class mg {
           schemaCX.index(indexField, indexOptions);
         }
       }
-      schemaCX.add({
-        id: {
-          type: Number,
-          index: true,
-          unique: true
-        }
-      });
       schemaCX.plugin(autoIncrement, {
-        field: "id"
+        field: "id",
+        useAutoIncrement
       });
       schemaCX.plugin(checkUpdate, {});
       //create model
@@ -141,11 +116,6 @@ class mg {
 }
 var autoIncrement = function (schema, options) {
   var field = {
-    _id: {
-      type: Number,
-      index: true,
-      unique: true
-    },
     createdOn: {
       type: Date,
       default: Date.now
@@ -166,18 +136,20 @@ var autoIncrement = function (schema, options) {
 
   // swith to options field
   var fieldName = getField(options);
-  if (fieldName !== "_id") {
+  if (fieldName !== "_id" && options.useAutoIncrement) {
     field[getField(options)] = {
       type: Number,
       index: true,
       unique: true
     };
-    delete field._id;
   }
   schema.add(field);
+  if (!options.useAutoIncrement) return;
   schema.pre("save", function (next) {
     var doc = this;
-    doc.createdOn = Date.now();
+    if (!doc.createdOn) {
+      doc.createdOn = Date.now();
+    }
     if (doc.db && doc.isNew && typeof doc[fieldName] === "undefined") {
       getNextSeqObservable(doc.db, doc.collection.name).retryWhen(err => {
         return err;

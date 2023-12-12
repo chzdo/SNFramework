@@ -5,14 +5,16 @@ import Mailer from "./controllers/mailers.mjs";
 import UploadFile from "./controllers/files.mjs";
 import MessageQueue from "./controllers/message-queue.mjs";
 import getFile from "./controllers/export.mjs";
+import Authentication_Authorization from "./controllers/auth.mjs";
 class framework {
     utils = utils
     static utils = utils
     modelInstance
     MessageQueue = MessageQueue
+    appAuth = Authentication_Authorization
     constructor() { }
 
-    async setMG({ url, models = [], sshCredentials = null }) {
+    setMG({ url, models = [], sshCredentials = null }) {
         if (!url) {
             throw new Error(`mongo db url not defined`)
         }
@@ -20,7 +22,7 @@ class framework {
             throw new Error(`models not defined`)
         }
         this.mg = new mg({ url, sshCredentials, models })
-        await this.mg.setupModels()
+        this.mg.setupModels()
         this.modelInstance = this.mg;
         return this;
 
@@ -58,8 +60,8 @@ class framework {
         return UploadFile
     }
 
-    export({ config, reportType = defaultFileType,  title, stream, sheets, settings}) {     
-      return getFile({ config, reportType ,  title, stream, sheets, settings})
+    export({ config, reportType = defaultFileType, title, stream, sheets, settings }) {
+        return getFile({ config, reportType, title, stream, sheets, settings })
     }
 }
 

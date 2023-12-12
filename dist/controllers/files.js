@@ -51,6 +51,7 @@ const azureUpload = async function (file) {
   return {
     url: blobClient.url,
     type: file.mimetype,
+    name: file.name,
     format: regex[2],
     secure_url: blobClient.url,
     filePath: uploadPath
@@ -97,6 +98,8 @@ const uploadFile = _index.default.wrapper(async (req, res) => {
 });
 const UploadFile = {
   selectedService: null,
+  azureUpload,
+  cloudUpload,
   folder: null,
   setup: function ({
     type = _index.default.FILE_TYPES.AZURE,
@@ -108,7 +111,6 @@ const UploadFile = {
       _cloudinary.default.config(options);
       this.selectedService = cloudUpload;
     } else {
-      console.log(_storageBlob, _streamifier, _cloudinary)
       azure = new _storageBlob.BlobServiceClient(options.url).getContainerClient(options.container);
       this.selectedService = azureUpload;
     }

@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 var _axios = _interopRequireDefault(require("axios"));
+var _httpErrors = require("./http-errors.js");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 const mimeTypes = {
   json: 'application/json',
@@ -93,8 +94,6 @@ const getOperator = text => {
     return "<";
   } else if (/\w(>)\w/.test(text)) {
     return ">";
-  } else if (/\w(is)\w/.test(text)) {
-    return "is";
   } else {
     return "=";
   }
@@ -180,7 +179,7 @@ const buildMongoQuery = function (payload = {}) {
         ...tempValue,
         ...getEqualQuery(key, value)
       };
-    } else if (/>|</.test(operator)) {
+    } else if (/[><]/.test(operator)) {
       if (value instanceof Date || typeof value === "number") {
         tempValue[key] = {
           [numericOps[operator]]: value
@@ -259,6 +258,14 @@ const getEqualQuery = (key, value) => {
         $lte: secondValue
       };
     }
+  } else if (typeof value === "string" && value.includes("|")) {
+    let [operator, numb] = value.split("|");
+    numb = getValueType(numb);
+    if (operator && numb) {
+      tempValue[key] = {
+        [`$${operator}`]: numb
+      };
+    }
   } else if (typeof value === "string" && value.includes("~")) {
     tempValue[key] = getRegex(value);
   } else {
@@ -322,8 +329,8 @@ const makeRequest = async function ({
     console.log(err.message);
     return {
       success: false,
-      error: err?.response.data,
-      code: err.response.status
+      error: err?.response?.data,
+      code: err.response?.status
     };
   }
 };
@@ -422,11 +429,61 @@ const FILE_TYPES = {
   CLOUDINARY: "cloudinary",
   AZURE: 'azure'
 };
+const middlewareVariables = {
+  where: "user",
+  create: {
+    "companyID": "companyID",
+    "createdBy": "userId"
+  },
+  update: {
+    "lastUpdatedBy": "userId"
+  },
+  query: {
+    "companyID": "companyID"
+  }
+};
+function joiFormat(message) {
+  const regex = /["]+/g;
+  return message.replace(regex, '');
+}
+const getPayloadFromRoute = ({
+  query,
+  values,
+  where
+}) => {
+  let body = {};
+  Object.keys(query).forEach(value => body[value] = values[query[value]]);
+  return body;
+};
+const getCreatePayloadFromRoute = ({
+  query,
+  values
+}) => {
+  let body = {};
+  Object.keys(query).forEach(value => {
+    if (value.includes(".")) {
+      const [mainKey, subKey] = value.split(".");
+      if (!body[mainKey]) {
+        body[mainKey] = {};
+      }
+      body[mainKey][subKey] = values[query[value]];
+    } else {
+      body[value] = values[query[value]];
+    }
+  });
+  return body;
+};
 var _default = {
   responseTransformer,
   wrapper,
   request,
   aggregatePaging,
-  FILE_TYPES
+  FILE_TYPES,
+  routeVariables: middlewareVariables,
+  joiFormat,
+  codes: _httpErrors.codes,
+  getPayloadFromRoute,
+  getCreatePayloadFromRoute,
+  buildQuery
 };
 exports.default = _default;
