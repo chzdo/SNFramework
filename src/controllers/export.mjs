@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import enums from '../utils/index.mjs'
 import fse from "fs-extra";
 import dayjs from 'dayjs';
-import {Readable} from 'readable-stream'
+import { Readable } from 'readable-stream'
 import pdf from "html-pdf-node"
 
 const sheetName = /[^\w\s-]/gi;
@@ -124,139 +124,146 @@ const format = {
     }
 }
 
-const toExcelFile = async function ({ title,sheets, fileName, stream }) {
-  const workbook = new ExcelJS.Workbook();
-  for (const sheetDetail of sheets) {
-      await writeExcelSheet({ title, ...sheetDetail, workbook });
-  }
-  if (stream) {
-    await workbook.xlsx.write(stream);
-} else{
-  fileName = fileName || `./${title}.xlsx`;
-await workbook.xlsx.writeFile(fileName);
-return fileName;
-}
-}
-
-const toTextFile = async ({ title = "main", settings, stream, reportType = reportTypes.CSV }) => {
-  let textFile;
-  let {rows,  useHeader=false, delimiter=",", columns ={}} = settings
-  const isJson = reportType === reportTypes.JSON, keysOrder = Object.keys(columns);
-  if (!isJson) {
-      textFile = '';
-      if (Object.keys(columns)?.length) {
-          //filter columns
-          for (const item of rows) {
-              for (const key in item) {
-                  if (columns[key]) continue;
-                  delete item[key]
-              }
-          }
-          for (const item of rows) {
-              for (const key in item) {
-                  const { format: formatKey } = columns[key];
-                  const formatValue = format[formatKey];
-                  if (typeof formatValue === "function") {
-                      item[key] = formatValue(item[key])
-                  }
-              }
-          }
-
-      }
-      if (useHeader && rows.length) {
-          textFile += `${Object.keys(rows[0]).join(delimiter)}`;
-      }
-      for (const [index, row] of rows.entries()) {
-          const orderedVal = []
-          for (const key of keysOrder) {
-              orderedVal.push(row[key])
-          }
-          const newLine = !textFile && index === 0 ? "" : "\n";
-          textFile += `${newLine}${Object.values(orderedVal).join(delimiter)}`;
-      }
-  }
-
-  if (stream) {
-    const readable = new Readable();
-    readable.push(textFile.toString());
-    readable.push(null)
-    readable.pipe(stream);
-    return;
-}
-
-  if (isJson) {
-      await fse.writeJSON(`./${title}.${reportType}`, rows);
-      return;
-  }
-  fse.writeFile(`./${title}.${reportType}`, textFile)
-}
-
-function createHTMLTable(data) {
-  let tableHTML = '<style>';
-  tableHTML += 'table { border-collapse: collapse; width: 100%; }';
-  tableHTML += 'th, td { border: 1px solid #000; padding: 8px; text-align: left; }';
-  tableHTML += '</style>';
-  
-  tableHTML += '<table>';
-  tableHTML += '<thead><tr>';
-  for (const key in data[0]) {
-    tableHTML += `<th>${key}</th>`;
-  }
-  tableHTML += '</tr></thead>';
-  
-  tableHTML += '<tbody>';
-  data.forEach((row) => {
-    tableHTML += '<tr>';
-    for (const key in row) {
-      tableHTML += `<td>${row[key]}</td>`;
+const toExcelFile = async function ({ title, sheets, fileName, stream }) {
+    const workbook = new ExcelJS.Workbook();
+    for (const sheetDetail of sheets) {
+        await writeExcelSheet({ title, ...sheetDetail, workbook });
     }
-    tableHTML += '</tr>';
-  });
-  tableHTML += '</tbody>';
-  
-  tableHTML += '</table>';
-  return tableHTML;
+    if (stream) {
+        stream.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        stream.set('Content-Disposition', `inline; filename="${fileName}.xlsx"`);
+        await workbook.xlsx.write(stream);
+    } else {
+        fileName = `./${title || fileName}.xlsx`;
+        await workbook.xlsx.writeFile(fileName);
+        return fileName;
+    }
+}
+
+const toTextFile = async ({ fileName, settings, stream, reportType = reportTypes.CSV }) => {
+    let textFile;
+    let { rows, useHeader = false, delimiter = ",", columns = {} } = settings
+    const isJson = reportType === reportTypes.JSON, keysOrder = Object.keys(columns);
+    let ct = 'application/json'
+    if (!isJson) {
+        ct = reportTypes.CSV ? 'text/csv' : 'text/plain'
+        textFile = '';
+        if (Object.keys(columns)?.length) {
+            //filter columns
+            for (const item of rows) {
+                for (const key in item) {
+                    if (columns[key]) continue;
+                    delete item[key]
+                }
+            }
+            for (const item of rows) {
+                for (const key in item) {
+                    const { format: formatKey } = columns[key];
+                    const formatValue = format[formatKey];
+                    if (typeof formatValue === "function") {
+                        item[key] = formatValue(item[key])
+                    }
+                }
+            }
+
+        }
+        if (useHeader && rows.length) {
+            textFile += `${Object.keys(rows[0]).join(delimiter)}`;
+        }
+        for (const [index, row] of rows.entries()) {
+            const orderedVal = []
+            for (const key of keysOrder) {
+                orderedVal.push(row[key])
+            }
+            const newLine = !textFile && index === 0 ? "" : "\n";
+            textFile += `${newLine}${Object.values(orderedVal).join(delimiter)}`;
+        }
+    }
+
+
+    if (stream) {
+        stream.set('Content-Type', ct);
+        stream.set('Content-Disposition', `inline; filename="${fileName}.${reportType}"`);
+        const readable = new Readable();
+        readable.push(isJson ? JSON.stringify(rows) : textFile.toString());
+        readable.push(null)
+        readable.pipe(stream);
+        return;
+    }
+
+    if (isJson) {
+        await fse.writeJSON(`./${title}.${reportType}`, rows);
+        return;
+    }
+    fse.writeFile(`./${title}.${reportType}`, textFile)
+}
+
+function createHTMLTable({ data = [] }) {
+    let tableHTML = '<style>';
+    tableHTML += 'table { border-collapse: collapse; width: 100%; }';
+    tableHTML += 'th, td { border: 1px solid #000; padding: 8px; text-align: left; }';
+    tableHTML += '</style>';
+
+    tableHTML += '<table>';
+    tableHTML += '<thead><tr>';
+    for (const key in data[0]) {
+        tableHTML += `<th>${key}</th>`;
+    }
+    tableHTML += '</tr></thead>';
+
+    tableHTML += '<tbody>';
+    data.forEach((row) => {
+        tableHTML += '<tr>';
+        for (const key in row) {
+            tableHTML += `<td>${row[key]}</td>`;
+        }
+        tableHTML += '</tr>';
+    });
+    tableHTML += '</tbody>';
+
+    tableHTML += '</table>';
+    return tableHTML;
 }
 
 
-const toPdfFile = async function ({ title = 'main', settings, stream, reportType = reportTypes.PDF }) {
-  const tableHTML = createHTMLTable(settings);
-  
-  const pdfOptions = { format: 'A4' };
-  
-  await pdf.generatePdf({ content: tableHTML }, pdfOptions)
-    .then((pdfBuffer) => {
-      if (stream) {
-        const readable = new Readable();
-        readable.push(pdfBuffer);
-        readable.push(null);
-        readable.pipe(stream);
-      } else {
-        const fileName = `./${title}.${reportType}`;
-        fse.writeFile(fileName, pdfBuffer);
-      }
-    })
-    .catch((error) => {
-      console.log('Error creating PDF:', error);
-    });
+const toPdfFile = async function ({ fileName, settings, stream }) {
+    const tableHTML = createHTMLTable(settings);
+    const pdfOptions = { format: 'A4' };
+    stream.set('Content-Type', 'application/pdf');
+    stream.set('Content-Disposition', `inline; filename="${fileName}.pdf"`);
+    await pdf.generatePdf({ content: tableHTML }, pdfOptions)
+        .then((pdfBuffer) => {
+            if (stream) {
+                const readable = new Readable();
+                readable.push(pdfBuffer);
+                readable.push(null);
+                readable.pipe(stream);
+            } else {
+                const fileName = `./${title}.${reportTypes.PDF}`;
+                fse.writeFile(fileName, pdfBuffer);
+            }
+        })
+        .catch((error) => {
+            console.log('Error creating PDF:', error);
+        });
 }
 
 const handlers = {
-  [reportTypes?.EXCEL]: toExcelFile,
-  [reportTypes?.CSV]: toTextFile,
-  [reportTypes?.TXT]: toTextFile,
-  [reportTypes?.JSON]:toTextFile,
-  [reportTypes?.PDF]: toPdfFile
+    [reportTypes?.EXCEL]: toExcelFile,
+    [reportTypes?.CSV]: toTextFile,
+    [reportTypes?.TXT]: toTextFile,
+    [reportTypes?.JSON]: toTextFile,
+    [reportTypes?.PDF]: toPdfFile
 }
 
 
-const getFile = async function({config, reportType = defaultFileType,title, stream, sheets , settings}) {
+const getFile = async function ({ reportType = defaultFileType, title, fileName, stream, sheets, settings }) {
     const reportHandler = handlers[reportType]
-    if (typeof reportHandler !== "function"){
-      console.log(`handler not defined for ${reportType}`)
-      return
+    if (typeof reportHandler !== "function") {
+        console.log(`handler not defined for ${reportType}`)
+        return
     }
-    await reportHandler ({ config, reportType,  title,  sheets , stream,  settings})
+    await reportHandler({ reportType, title, sheets, stream, settings, fileName })
 }
 
 

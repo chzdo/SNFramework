@@ -60,8 +60,11 @@ class framework {
         return UploadFile
     }
 
-    export({ config, reportType = defaultFileType, title, stream, sheets, settings }) {
-        return getFile({ config, reportType, title, stream, sheets, settings })
+    export({ config, reportType, title, stream, fileName, sheets, settings }) {
+        if (!reportType) {
+            throw new Error('Set Export Type')
+        }
+        return getFile({ config, reportType, title, fileName, stream, sheets, settings })
     }
 }
 
