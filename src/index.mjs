@@ -4,6 +4,7 @@ import utils from "./utils/index.mjs";
 import Mailer from "./controllers/mailers.mjs";
 import UploadFile from "./controllers/files.mjs";
 import MessageQueue from "./controllers/message-queue.mjs";
+import getFile from "./controllers/export.mjs";
 import Authentication_Authorization from "./controllers/auth.mjs";
 class framework {
     utils = utils
@@ -59,6 +60,12 @@ class framework {
         return UploadFile
     }
 
+    export({ config, reportType, title, stream, fileName, sheets, settings }) {
+        if (!reportType) {
+            throw new Error('Set Export Type')
+        }
+        return getFile({ config, reportType, title, fileName, stream, sheets, settings })
+    }
 }
 
 export default framework
