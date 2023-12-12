@@ -15,6 +15,13 @@ const mimeTypes = {
   xml: 'text/xml',
   html: 'text/html'
 };
+const types = {
+  EXCEL: 'excel',
+  CSV: 'csv',
+  JSON: 'json',
+  TXT: 'txt',
+  PDF: 'pdf'
+};
 const OPERATOR = "operator";
 const ensureArray = function (data) {
   if (!Array.isArray(data)) {
@@ -479,6 +486,7 @@ var _default = {
   request,
   aggregatePaging,
   FILE_TYPES,
+  types,
   routeVariables: middlewareVariables,
   joiFormat,
   codes: _httpErrors.codes,

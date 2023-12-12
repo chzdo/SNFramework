@@ -10,6 +10,7 @@ var _index2 = _interopRequireDefault(require("./utils/index.js"));
 var _mailers = _interopRequireDefault(require("./controllers/mailers.js"));
 var _files = _interopRequireDefault(require("./controllers/files.js"));
 var _messageQueue = _interopRequireDefault(require("./controllers/message-queue.js"));
+var _export = _interopRequireDefault(require("./controllers/export.js"));
 var _auth = _interopRequireDefault(require("./controllers/auth.js"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 class framework {
@@ -94,6 +95,28 @@ class framework {
   }
   fileUploader() {
     return _files.default;
+  }
+  export({
+    config,
+    reportType,
+    title,
+    stream,
+    fileName,
+    sheets,
+    settings
+  }) {
+    if (!reportType) {
+      throw new Error('Set Export Type');
+    }
+    return (0, _export.default)({
+      config,
+      reportType,
+      title,
+      fileName,
+      stream,
+      sheets,
+      settings
+    });
   }
 }
 var _default = framework;
