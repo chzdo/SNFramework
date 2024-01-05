@@ -7,6 +7,7 @@ exports.default = void 0;
 var _joi = _interopRequireDefault(require("joi"));
 var _index = _interopRequireDefault(require("../utils/index.js"));
 var _express = _interopRequireDefault(require("express"));
+var _dayjs = _interopRequireDefault(require("dayjs"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 const Router = _express.default.Router();
 const wrapper = _index.default.wrapper;
@@ -22,6 +23,7 @@ class CRUD {
   #id;
   middlewareVariables;
   modelInstance;
+  exportOption = {};
 
   /**
    * 
@@ -419,7 +421,9 @@ class CRUD {
       return {
         code: 200,
         data: {
-          data: query
+          data: query,
+          ...this.exportOption,
+          fileName: `${(0, _dayjs.default)().format("DD/MM/YYYY")}_${this.exportOption.title || ''}`
         }
       };
     } catch (e) {

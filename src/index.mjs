@@ -41,11 +41,12 @@ class framework {
             create: {},
             query: {},
         },
+        ...rest
     }) {
         if (!(name && model && validations)) {
             throw new Error(`incomplete parameters`)
         }
-        return new CRUD({ model, controller: name, validations, callback, populateOptions, flat, defaultSort, middlewareVariables, modelInstance: this.modelInstance });
+        return new CRUD({ model, controller: name, validations, callback, populateOptions, flat, defaultSort, middlewareVariables, modelInstance: this.modelInstance, ...rest });
         // return this]];
     }
 

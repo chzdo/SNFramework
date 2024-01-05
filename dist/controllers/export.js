@@ -5,15 +5,15 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 var _exceljs = _interopRequireDefault(require("exceljs"));
-var _index = _interopRequireDefault(require("../utils/index.js"));
 var _fsExtra = _interopRequireDefault(require("fs-extra"));
 var _dayjs = _interopRequireDefault(require("dayjs"));
 var _readableStream = require("readable-stream");
 var _htmlPdfNode = _interopRequireDefault(require("html-pdf-node"));
+var _enums = require("../utils/enums.js");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 const sheetName = /[^\w\s-]/gi;
 const tableNameRegex = /[^\w]/gi;
-const reportTypes = _index.default.types;
+const reportTypes = _enums.types;
 const defaultFileType = reportTypes?.EXCEL;
 function getTableOrSheetName({
   name,
@@ -259,7 +259,8 @@ const toTextFile = async ({
   _fsExtra.default.writeFile(`./${title}.${reportType}`, textFile);
 };
 function createHTMLTable({
-  data = []
+  data = [],
+  columns
 }) {
   let tableHTML = '<style>';
   tableHTML += 'table { border-collapse: collapse; width: 100%; }';
@@ -268,14 +269,14 @@ function createHTMLTable({
   tableHTML += '<table>';
   tableHTML += '<thead><tr>';
   for (const key in data[0]) {
-    tableHTML += `<th>${key}</th>`;
+    tableHTML += `<th>${columns[key].title}</th>`;
   }
   tableHTML += '</tr></thead>';
   tableHTML += '<tbody>';
   data.forEach(row => {
     tableHTML += '<tr>';
     for (const key in row) {
-      tableHTML += `<td>${row[key]}</td>`;
+      tableHTML += `<td>${columns[key]?.format ? columns[key]?.format(row[key]) : row[key]}</td>`;
     }
     tableHTML += '</tr>';
   });

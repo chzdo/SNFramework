@@ -7,6 +7,7 @@ import config from "dotenv";
 config.config()
 console.log(`here`)
 import db from "./src/utils/db.mjs";
+import { Axios } from "axios";
 console.log(`here`)
 const app = express();
 
@@ -115,7 +116,9 @@ app.use("/", companyController.registerRoutes({}));
 // console.log(await user.findAll({ query: {}, page: 3, limit: 70 }))
 
 
-app.all("/excel", (req, res) => {
+app.all("/excel", [framework.appAuth.setup({
+    finratusAPI: process.env.FINRATUS_API
+}).auth], (req, res) => {
     const excelSheets = [
         {
             title: 'Overview',
@@ -170,3 +173,8 @@ app.listen(3300, () => {
 
 //get routes for models
 
+
+// const axios = new Axios();
+// axios.get("http://localhost:3300",{
+
+// })

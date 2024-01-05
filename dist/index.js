@@ -52,7 +52,8 @@ class framework {
       where: "",
       create: {},
       query: {}
-    }
+    },
+    ...rest
   }) {
     if (!(name && model && validations)) {
       throw new Error(`incomplete parameters`);
@@ -66,7 +67,8 @@ class framework {
       flat,
       defaultSort,
       middlewareVariables,
-      modelInstance: this.modelInstance
+      modelInstance: this.modelInstance,
+      ...rest
     });
     // return this]];
   }

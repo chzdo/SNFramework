@@ -1,13 +1,13 @@
 import ExcelJS from 'exceljs';
-import enums from '../utils/index.mjs'
 import fse from "fs-extra";
 import dayjs from 'dayjs';
 import { Readable } from 'readable-stream'
 import pdf from "html-pdf-node"
+import { types } from '../utils/enums.mjs';
 
 const sheetName = /[^\w\s-]/gi;
 const tableNameRegex = /[^\w]/gi
-const reportTypes = enums.types;
+const reportTypes = types;
 const defaultFileType = reportTypes?.EXCEL;
 
 function getTableOrSheetName({ name, workbook, isSheetName = true }) {
@@ -198,7 +198,8 @@ const toTextFile = async ({ fileName, settings, stream, reportType = reportTypes
     fse.writeFile(`./${title}.${reportType}`, textFile)
 }
 
-function createHTMLTable({ data = [] }) {
+function createHTMLTable({ data = [], columns }) {
+
     let tableHTML = '<style>';
     tableHTML += 'table { border-collapse: collapse; width: 100%; }';
     tableHTML += 'th, td { border: 1px solid #000; padding: 8px; text-align: left; }';
@@ -207,7 +208,7 @@ function createHTMLTable({ data = [] }) {
     tableHTML += '<table>';
     tableHTML += '<thead><tr>';
     for (const key in data[0]) {
-        tableHTML += `<th>${key}</th>`;
+        tableHTML += `<th>${columns[key].title}</th>`;
     }
     tableHTML += '</tr></thead>';
 
@@ -215,7 +216,7 @@ function createHTMLTable({ data = [] }) {
     data.forEach((row) => {
         tableHTML += '<tr>';
         for (const key in row) {
-            tableHTML += `<td>${row[key]}</td>`;
+            tableHTML += `<td>${columns[key]?.format ? columns[key]?.format(row[key]) : row[key]}</td>`;
         }
         tableHTML += '</tr>';
     });

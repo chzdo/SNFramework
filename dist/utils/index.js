@@ -6,30 +6,33 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = void 0;
 var _axios = _interopRequireDefault(require("axios"));
 var _httpErrors = require("./http-errors.js");
+var _enums = require("./enums.js");
+var _export = _interopRequireDefault(require("../controllers/export.js"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-const mimeTypes = {
-  json: 'application/json',
-  csv: 'text/csv',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  txt: 'text/plain',
-  xml: 'text/xml',
-  html: 'text/html'
-};
-const types = {
-  EXCEL: 'excel',
-  CSV: 'csv',
-  JSON: 'json',
-  TXT: 'txt',
-  PDF: 'pdf'
-};
 const OPERATOR = "operator";
-const ensureArray = function (data) {
-  if (!Array.isArray(data)) {
-    return [data];
+const ensureArray = function (rows, cols) {
+  let tempRows = [];
+  const headers = Object.keys(cols).map(col => ({
+    label: col,
+    index: cols[col].index || 0
+  })).sort((a, b) => {
+    if (a.index > b.index) return 1;
+    return -1;
+  }).map(val => val.label);
+  for (let row of rows) {
+    let tempRow = {};
+    for (let key of headers) {
+      const config = cols[key];
+      tempRow[key] = row[key];
+      if (typeof config.getValue === 'function') {
+        tempRow[key] = config.getValue(row);
+      }
+    }
+    tempRows.push(tempRow);
   }
-  return data;
+  return tempRows;
 };
-const acceptableMimeTypes = Object.entries(mimeTypes).map(([, value]) => value);
+const acceptableMimeTypes = Object.entries(_enums.mimeTypes).map(([, value]) => value);
 const responseTransformer = async function (req, res, next) {
   res.transform = async function (data, {
     responseType,
@@ -45,11 +48,14 @@ const responseTransformer = async function (req, res, next) {
       }
     }
     if (responseType.indexOf('/') === -1) {
-      responseType = mimeTypes[responseType];
+      responseType = _enums.mimeTypes[responseType];
     }
-    let columns = {};
+    let columns = data.columns || {};
+    ;
+    let rows = data.data?.data || data;
     switch (responseType) {
-      case mimeTypes.csv:
+      case _enums.mimeTypes.txt:
+      case _enums.mimeTypes.csv:
         // data = ensureArray(data);
         // if (data.length > 0) {
         //     const csv = new ObjectsToCsv(data);
@@ -57,27 +63,47 @@ const responseTransformer = async function (req, res, next) {
         //     return res.send(await csv.toString())
         // }
         break;
-      case mimeTypes.json:
+      case _enums.mimeTypes.pdf:
+        rows = data.data?.data || data;
+        rows = ensureArray(rows, columns);
+        res.set('Content-Type', responseType);
+        res.set('Content-Disposition', `inline; filename="${fileName}.pdf"`);
+        res.set("access-control-expose-headers", "Content-Disposition");
+        return (0, _export.default)({
+          settings: {
+            data: rows,
+            columns
+          },
+          fileName,
+          stream: res,
+          reportType: _enums.types.PDF
+        });
+      case _enums.mimeTypes.json:
         res.set('Content-Type', 'application/json');
         return res.status(code).json(data);
-      case mimeTypes.xlsx:
-        columns = data.columns || {};
-        data = data.data || data;
-        data = ensureArray(data);
-        if (data.length > 0) {
+      case _enums.mimeTypes.xlsx:
+        rows = ensureArray(rows, columns);
+        if (rows.length > 0) {
           res.set('Content-Type', responseType);
           res.set('Content-Disposition', `inline; filename="${fileName}.xlsx"`);
-          //  return await toExcel({ title: "Main", columns, rows: data, stream: res });
+          res.set("access-control-expose-headers", "Content-Disposition");
+          return (0, _export.default)({
+            sheets: [{
+              title: data.title,
+              columns,
+              rows
+            }],
+            fileName,
+            stream: res,
+            reportType: _enums.types.EXCEL
+          });
         }
-
         break;
-      case mimeTypes.txt:
-        break;
-      case mimeTypes.xml:
+      case _enums.mimeTypes.xml:
         // res.set('Content-Type', 'text/xml');
         // return res.send(js2xmlparser.parse("root", data));
         break;
-      case mimeTypes.html:
+      case _enums.mimeTypes.html:
         // data = ensureArray(data);
         // if (data.length > 0) {
         //   //  return res.send(toHtmlTable(data));
@@ -295,6 +321,8 @@ const wrapper = function (callback, buildFilter = true) {
       };
       if (buildFilter) {
         req.filter = buildQuery(req.query);
+        req.isFile = isFileRequest(req);
+        req.filter.limit = req.isFile ? Number.MAX_SAFE_INTEGER : req.filter.limit;
       }
       const result = await callback(req, next);
       if (result.callNext) {
@@ -303,8 +331,9 @@ const wrapper = function (callback, buildFilter = true) {
       }
       result.data.success = !(result.code > 299);
       return res.transform(result.data, {
-        responseType,
-        fileName: result.fileName,
+        responseType: req.accepts()[0],
+        config: result.config,
+        fileName: result.data.fileName,
         code: result.code || 200
       });
     } catch (err) {
@@ -432,23 +461,6 @@ const aggregatePaging = (limit, page) => {
     }
   }];
 };
-const FILE_TYPES = {
-  CLOUDINARY: "cloudinary",
-  AZURE: 'azure'
-};
-const middlewareVariables = {
-  where: "user",
-  create: {
-    "companyID": "companyID",
-    "createdBy": "userId"
-  },
-  update: {
-    "lastUpdatedBy": "userId"
-  },
-  query: {
-    "companyID": "companyID"
-  }
-};
 function joiFormat(message) {
   const regex = /["]+/g;
   return message.replace(regex, '');
@@ -480,18 +492,23 @@ const getCreatePayloadFromRoute = ({
   });
   return body;
 };
+const isFileRequest = req => {
+  const accept = req.accepts()[0];
+  return accept !== _enums.mimeTypes.json;
+};
 var _default = {
   responseTransformer,
   wrapper,
   request,
   aggregatePaging,
-  FILE_TYPES,
-  types,
-  routeVariables: middlewareVariables,
+  FILE_TYPES: _enums.FILE_TYPES,
+  types: _enums.types,
+  routeVariables: _enums.middlewareVariables,
   joiFormat,
   codes: _httpErrors.codes,
   getPayloadFromRoute,
   getCreatePayloadFromRoute,
-  buildQuery
+  buildQuery,
+  isFileRequest
 };
 exports.default = _default;

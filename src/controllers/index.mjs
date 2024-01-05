@@ -1,6 +1,7 @@
 import Joi from "joi";
 import utils from "../utils/index.mjs";
 import express from "express";
+import dayjs from "dayjs";
 const Router = express.Router();
 const wrapper = utils.wrapper;
 
@@ -16,6 +17,7 @@ class CRUD {
     #id
     middlewareVariables;
     modelInstance
+    exportOption = {}
 
 
     /**
@@ -235,7 +237,9 @@ class CRUD {
             return {
                 code: 200,
                 data: {
-                    data: query
+                    data: query,
+                    ...(this.exportOption),
+                    fileName: `${dayjs().format("DD/MM/YYYY")}_${this.exportOption.title || ''}`
                 }
             }
         } catch (e) {

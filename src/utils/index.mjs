@@ -1,29 +1,34 @@
 import axios from "axios";
 import { codes } from "./http-errors.mjs";
+import { types, mimeTypes, middlewareVariables, FILE_TYPES } from "./enums.mjs";
+import getFile from "../controllers/export.mjs";
 
-const mimeTypes = {
-    json: 'application/json',
-    csv: 'text/csv',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    txt: 'text/plain',
-    xml: 'text/xml',
-    html: 'text/html'
-};
-const types = {
-    EXCEL: 'excel',
-    CSV: 'csv',
-    JSON: 'json',
-    TXT: 'txt',
-    PDF: 'pdf'
-};
+
 
 const OPERATOR = "operator";
 
-const ensureArray = function (data) {
-    if (!Array.isArray(data)) {
-        return [data];
+const ensureArray = function (rows, cols) {
+    let tempRows = [];
+    const headers = Object.keys(cols).map((col) => ({
+        label: col,
+        index: cols[col].index || 0
+    })).sort((a, b) => {
+        if (a.index > b.index) return 1;
+        return -1
+    }).map((val) => val.label)
+
+    for (let row of rows) {
+        let tempRow = {}
+        for (let key of headers) {
+            const config = cols[key]
+            tempRow[key] = row[key]
+            if (typeof config.getValue === 'function') {
+                tempRow[key] = config.getValue(row)
+            }
+        }
+        tempRows.push(tempRow)
     }
-    return data;
+    return tempRows
 }
 
 
@@ -44,8 +49,10 @@ const responseTransformer = async function (req, res, next) {
             responseType = mimeTypes[responseType];
         }
 
-        let columns = {};
+        let columns = data.columns || {};;
+        let rows = data.data?.data || data
         switch (responseType) {
+            case mimeTypes.txt:
             case mimeTypes.csv:
                 // data = ensureArray(data);
                 // if (data.length > 0) {
@@ -54,20 +61,32 @@ const responseTransformer = async function (req, res, next) {
                 //     return res.send(await csv.toString())
                 // }
                 break;
+            case mimeTypes.pdf:
+                rows = data.data?.data || data
+                rows = ensureArray(rows, columns);
+                res.set('Content-Type', responseType);
+                res.set('Content-Disposition', `inline; filename="${fileName}.pdf"`);
+                res.set("access-control-expose-headers", "Content-Disposition")
+                return getFile({ settings: { data: rows, columns }, fileName, stream: res, reportType: types.PDF })
             case mimeTypes.json:
                 res.set('Content-Type', 'application/json');
                 return res.status(code).json(data);
             case mimeTypes.xlsx:
-                columns = data.columns || {};
-                data = data.data || data;
-                data = ensureArray(data);
-                if (data.length > 0) {
+                rows = ensureArray(rows, columns);
+                if (rows.length > 0) {
                     res.set('Content-Type', responseType);
                     res.set('Content-Disposition', `inline; filename="${fileName}.xlsx"`);
-                    //  return await toExcel({ title: "Main", columns, rows: data, stream: res });
+                    res.set("access-control-expose-headers", "Content-Disposition")
+                    return getFile({
+                        sheets: [{
+                            title: data.title,
+                            columns,
+                            rows
+                        }],
+                        fileName,
+                        stream: res, reportType: types.EXCEL
+                    })
                 }
-                break;
-            case mimeTypes.txt:
                 break;
             case mimeTypes.xml:
                 // res.set('Content-Type', 'text/xml');
@@ -268,8 +287,11 @@ const wrapper = function (callback, buildFilter = true) {
     return async function (req, res, next) {
         try {
             const { responseType, ...rest } = { ...req.query, ...req.params };
+
             if (buildFilter) {
                 req.filter = buildQuery(req.query)
+                req.isFile = isFileRequest(req)
+                req.filter.limit = req.isFile ? Number.MAX_SAFE_INTEGER : req.filter.limit
             }
             const result = await callback(req, next);
 
@@ -278,7 +300,7 @@ const wrapper = function (callback, buildFilter = true) {
                 return next()
             }
             result.data.success = !(result.code > 299)
-            return res.transform(result.data, { responseType, fileName: result.fileName, code: result.code || 200 });
+            return res.transform(result.data, { responseType: req.accepts()[0], config: result.config, fileName: result.data.fileName, code: result.code || 200 });
         } catch (err) {
             next(err);
         }
@@ -386,17 +408,7 @@ const aggregatePaging = (limit, page) => {
     ]
 }
 
-const FILE_TYPES = {
-    CLOUDINARY: "cloudinary",
-    AZURE: 'azure'
-}
 
-const middlewareVariables = {
-    where: "user",
-    create: { "companyID": "companyID", "createdBy": "userId" },
-    update: { "lastUpdatedBy": "userId" },
-    query: { "companyID": "companyID" },
-};
 
 function joiFormat(message) {
     const regex = /["]+/g;
@@ -426,6 +438,11 @@ const getCreatePayloadFromRoute = ({ query, values }) => {
     return body;
 }
 
+const isFileRequest = (req) => {
+    const accept = req.accepts()[0];
+    return accept !== mimeTypes.json
+}
+
 export default {
     responseTransformer,
     wrapper,
@@ -438,5 +455,6 @@ export default {
     codes,
     getPayloadFromRoute,
     getCreatePayloadFromRoute,
-    buildQuery
+    buildQuery,
+    isFileRequest
 }
