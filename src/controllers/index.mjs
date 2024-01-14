@@ -96,6 +96,9 @@ class CRUD {
                 }
             }
             const result = await this.model.create(body);
+            if (this.populateOptions.length) {
+                await result.populate(this.populateOptions)
+            }
             if (callback) {
                 return { callNext: true, result }
             }
@@ -153,6 +156,9 @@ class CRUD {
                 }
             }
             const result = await this.model.create(body);
+            if (this.populateOptions.length) {
+                await result.populate(this.populateOptions)
+            }
             if (callback) {
                 return { callNext: true, result }
             }
@@ -207,6 +213,10 @@ class CRUD {
                 }
             }
             const result = await this.model.findOneAndUpdate({ [this.#id]: id, isDeleted: false, ...query }, data, { new: true });
+
+            if (this.populateOptions.length) {
+                await result.populate(this.populateOptions)
+            }
             if (callback) {
                 return { callNext: true, result }
             }

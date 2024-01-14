@@ -51,6 +51,9 @@ const responseTransformer = async function (req, res, next) {
 
         let columns = data.columns || {};;
         let rows = data.data?.data || data
+
+        delete data.columns;
+        delete data.fileName
         switch (responseType) {
             case mimeTypes.txt:
             case mimeTypes.csv:

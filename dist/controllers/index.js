@@ -126,6 +126,9 @@ class CRUD {
         }
       }
       const result = await this.model.create(body);
+      if (this.populateOptions.length) {
+        await result.populate(this.populateOptions);
+      }
       if (callback) {
         return {
           callNext: true,
@@ -224,6 +227,9 @@ class CRUD {
         }
       }
       const result = await this.model.create(body);
+      if (this.populateOptions.length) {
+        await result.populate(this.populateOptions);
+      }
       if (callback) {
         return {
           callNext: true,
@@ -348,6 +354,9 @@ class CRUD {
       }, data, {
         new: true
       });
+      if (this.populateOptions.length) {
+        await result.populate(this.populateOptions);
+      }
       if (callback) {
         return {
           callNext: true,
