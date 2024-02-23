@@ -590,6 +590,7 @@ function addUserToRequest(data, { employeeID, token, isEmployee, companyID, myxa
         companyData: data.companyData || data.companyID,
         isManager: data.employeeSubordinates?.length > 0,
         subordinates: data.employeeSubordinates,
+        mentees: data.mentees,
         manager: data.employeeManager,
         myxalaryEmployee,
         isMobileClient,
