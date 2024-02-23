@@ -197,6 +197,96 @@ const handleEmployeeAuth = async ({
       preserveNullAndEmptyArrays: true
     }
   }, {
+    $unwind:
+    /**
+     * path: Path to the array field.
+     * includeArrayIndex: Optional name for index.
+     * preserveNullAndEmptyArrays: Optional
+     *   toggle to unwind null and empty values.
+     */
+    {
+      path: "$mentees",
+      preserveNullAndEmptyArrays: true
+    }
+  }, {
+    $lookup:
+    /**
+     * from: The target collection.
+     * localField: The local join field.
+     * foreignField: The target join field.
+     * as: The name for the results.
+     * pipeline: Optional pipeline to run on the foreign collection.
+     * let: Optional variables to use in the pipeline field stages.
+     */
+    {
+      from: "employees",
+      let: {
+        id: "$mentees"
+      },
+      pipeline: [{
+        $match: {
+          $expr: {
+            $and: [{
+              $eq: ["$_id", "$$id"]
+            }, {
+              isActive: true
+            }, {
+              $or: [{
+                $eq: ["$termination", null]
+              }, {
+                $eq: ["$termination.status", false]
+              }]
+            }]
+          }
+        }
+      }, {
+        $lookup: {
+          from: "employeecadres",
+          localField: "employeeCadre",
+          foreignField: "_id",
+          as: "employeeCadre"
+        }
+      }, {
+        $lookup: {
+          from: "departments",
+          localField: "departmentID",
+          foreignField: "_id",
+          as: "departmentID"
+        }
+      }, {
+        $lookup: {
+          from: "branches",
+          localField: "branchID",
+          foreignField: "_id",
+          as: "branchID"
+        }
+      }, {
+        $addFields: {
+          employeeCadre: {
+            $arrayElemAt: ["$employeeCadre", 0]
+          },
+          departmentID: {
+            $arrayElemAt: ["$departmentID", 0]
+          },
+          branchID: {
+            $arrayElemAt: ["$branchID", 0]
+          }
+        }
+      }, {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          myx3ID: 1,
+          employeeEmail: 1,
+          profileImgUrl: 1,
+          employeeCadre: 1,
+          departmentID: 1,
+          branchID: 1
+        }
+      }],
+      as: "mentees"
+    }
+  }, {
     $lookup: {
       from: "employees",
       let: {
@@ -272,6 +362,17 @@ const handleEmployeeAuth = async ({
       }
     }
   }, {
+    $addFields:
+    /**
+     * newField: The new field name.
+     * expression: The new field expression.
+     */
+    {
+      mentees: {
+        $arrayElemAt: ["$mentees", 0]
+      }
+    }
+  }, {
     $group: {
       _id: "$_id",
       main: {
@@ -279,11 +380,15 @@ const handleEmployeeAuth = async ({
       },
       employeeSubordinates: {
         $push: "$employeeSubordinates"
+      },
+      mentees: {
+        $push: "$mentees"
       }
     }
   }, {
     $addFields: {
-      "main.employeeSubordinates": "$employeeSubordinates"
+      "main.employeeSubordinates": "$employeeSubordinates",
+      "main.mentees": "$mentees"
     }
   }, {
     $replaceRoot: {
