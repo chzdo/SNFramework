@@ -486,7 +486,7 @@ const handleEmployeeAuth = async ({ token = '', employeeID, companyID }) => {
                         $push: "$employeeSubordinates",
                     },
                     mentees: {
-                        $push: "$mentees",
+                        $addToSet: "$mentees",
                     },
                 },
             },
