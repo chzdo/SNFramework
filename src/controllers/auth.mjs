@@ -591,6 +591,7 @@ function addUserToRequest(data, { employeeID, token, isEmployee, companyID, myxa
         isManager: data.employeeSubordinates?.length > 0,
         subordinates: data.employeeSubordinates,
         mentees: data.mentees,
+        isMentor: !!data.mentees?.length,
         manager: data.employeeManager,
         myxalaryEmployee,
         isMobileClient,
@@ -773,6 +774,39 @@ const Authentication_Authorization = {
             isSupervisorOrAdmin: async function (req, res, next) {
                 const { isManager, isAdmin } = req.user;
                 if (!(isManager || isAdmin)) {
+                    return res.status(FORBIDDEN.CODE).json({
+                        code: FORBIDDEN.CODE,
+                        statusCode: FORBIDDEN.CODE,
+                        error: FORBIDDEN.MESSAGE
+                    })
+                }
+                next()
+            },
+            isMentor: async function (req, res, next) {
+                const { isMentor } = req.user;
+                if (!(isMentor)) {
+                    return res.status(FORBIDDEN.CODE).json({
+                        code: FORBIDDEN.CODE,
+                        statusCode: FORBIDDEN.CODE,
+                        error: FORBIDDEN.MESSAGE
+                    })
+                }
+                next()
+            },
+            isSupervisorOrIsMentor: async function (req, res, next) {
+                const { isManager, isMentor } = req.user;
+                if (!(isManager || isMentor)) {
+                    return res.status(FORBIDDEN.CODE).json({
+                        code: FORBIDDEN.CODE,
+                        statusCode: FORBIDDEN.CODE,
+                        error: FORBIDDEN.MESSAGE
+                    })
+                }
+                next()
+            },
+            isSupervisorOrIsMentorOrIsAdmin: async function (req, res, next) {
+                const { isManager, isMentor, isAdmin } = req.user;
+                if (!(isManager || isMentor || isAdmin)) {
                     return res.status(FORBIDDEN.CODE).json({
                         code: FORBIDDEN.CODE,
                         statusCode: FORBIDDEN.CODE,
