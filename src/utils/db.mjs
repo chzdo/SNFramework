@@ -2,14 +2,21 @@ import { MongoClient } from "mongodb"
 import config from "dotenv";
 config.config()
 const dbUrl = process.env.AUTH_DB;
-
-const db = new MongoClient(dbUrl)
+let db
+try {
+    db = new MongoClient(dbUrl)
+} catch (e) {
+    console.warn("auth db not specified - ignore if you do not intend to use the auth")
+}
 const dbName = 'myxalary'
+
 
 class DB {
     #db
     constructor() {
-        this.#connect()
+        if (db) {
+            this.#connect()
+        }
     }
 
     async #connect() {
