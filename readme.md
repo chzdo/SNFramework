@@ -7,9 +7,9 @@ SNFramework is a tool that makes building a backend application hassle free. It 
 You can install directly from this repo using git   to install SNframework. You can Specify the tag to use. e.g 1.0.9
 
 ```bash
-yarn add git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#1.0.9
+yarn add git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.1.6
 
-npm install git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#1.0.9
+npm install git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.1.6
 ```
 
 ## Initialization
@@ -34,13 +34,9 @@ There are three types of auth
 
 ```javascript
 //finratusAPI - API for finratus user validations
-const finratusAPI = process.env.FINRATUS_API;
-//mxEmployeeAPI - API for myxalary employee validations
-const mxEmployeeAPI = process.env.MYXALARY_EMPLOYEE_API;
-//mxUserAPI - API for myxalary user validations
-const mxUserAPI = process.env.MYXALARY_USER_API;
+const finratusAPI = process.env.FINRATUS_API; //Ignore finratus if you do not intend to use mobile client
 //setup authentication
-const auth = framework.appAuth.setup({ finratusAPI, mxUserAPI, mxEmployeeAPI })
+const auth = framework.appAuth.setup({ finratusAPI })
 export default auth
 ```
 
@@ -73,7 +69,9 @@ Router.use(auth.auth)
     manager,
     myxalaryEmployee, //check if request is coming from myxalary employee
     isMobileClient, //check if the request is coming from mobile client
-    token
+    token,
+    isMentee,
+    mentees
 } = req.user
 ```
  2.  You can authorize users based on their role.
@@ -89,6 +87,8 @@ Router.get("/",[auth.isSupervisor], function(req,res)=>{})
 Router.get("/",[auth.isAdmin], function(req,res)=>{})
 //Check if user is either an Admin or Supervisor
 Router.get("/",[auth.isSupervisorOrAdmin], function(req,res)=>{})
+//check id user is a mentee
+Router.get("/",[auth.isMentee], function(req,res)=>{})
 ```
 
 ## File Upload Module
