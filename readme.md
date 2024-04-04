@@ -7,9 +7,9 @@ SNFramework is a tool that makes building a backend application hassle free. It 
 You can install directly from this repo using git   to install SNframework. You can Specify the tag to use. e.g 1.0.9
 
 ```bash
-yarn add git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.1.6
+yarn add git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.2.2
 
-npm install git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.1.6
+npm install git+ssh://git@ssh.dev.azure.com:v3/ATBTechLtd/MyXalary/SNFramework#2.2.2
 ```
 
 ## Initialization
