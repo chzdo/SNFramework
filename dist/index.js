@@ -12,6 +12,7 @@ var _files = _interopRequireDefault(require("./controllers/files.js"));
 var _messageQueue = _interopRequireDefault(require("./controllers/message-queue.js"));
 var _export = _interopRequireDefault(require("./controllers/export.js"));
 var _auth = _interopRequireDefault(require("./controllers/auth.js"));
+var _myxalary = _interopRequireDefault(require("./controllers/myxalary.js"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 class framework {
   utils = _index2.default;
@@ -19,6 +20,7 @@ class framework {
   modelInstance;
   MessageQueue = _messageQueue.default;
   appAuth = _auth.default;
+  myxalary = _myxalary.default;
   constructor() {}
   setMG({
     url,

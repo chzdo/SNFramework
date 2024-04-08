@@ -6,12 +6,14 @@ import UploadFile from "./controllers/files.mjs";
 import MessageQueue from "./controllers/message-queue.mjs";
 import getFile from "./controllers/export.mjs";
 import Authentication_Authorization from "./controllers/auth.mjs";
+import myxalaryController from "./controllers/myxalary.mjs";
 class framework {
     utils = utils
     static utils = utils
     modelInstance
     MessageQueue = MessageQueue
     appAuth = Authentication_Authorization
+    myxalary = myxalaryController
     constructor() { }
 
     setMG({ url, models = [], sshCredentials = null }) {
