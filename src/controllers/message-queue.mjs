@@ -18,15 +18,30 @@ class MessageQueue {
     async setup({ topic, subscriptionConfig }) {
         try {
             const client = new ServiceBusAdministrationClient(this.url);
-            try {
+            if (!(await client.topicExists(topic))) {
                 await client.createTopic(topic);
-            } catch (e) {
-                console.log(e)
             }
             const params = [topic, subscriptionConfig?.name];
             subscriptionConfig?.filter && (params.push(subscriptionConfig?.filter))
-            await client.createSubscription(...params);
-            return true;
+            return await client.createSubscription(...params);
+        } catch (e) {
+            return e.message
+        }
+    }
+
+    async deleteTopic({ topic }) {
+        try {
+            const client = new ServiceBusAdministrationClient(this.url);
+            return await client.deleteTopic(topic);
+        } catch (e) {
+            return e.message
+        }
+    }
+
+    async deleteSubscription({ topic, subscriptionConfig }) {
+        try {
+            const client = new ServiceBusAdministrationClient(this.url);
+            return await client.deleteSubscription(topic, subscriptionConfig?.name);
         } catch (e) {
             return e.message
         }

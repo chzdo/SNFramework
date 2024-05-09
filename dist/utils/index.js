@@ -226,7 +226,7 @@ const buildMongoQuery = function (payload = {}) {
   if (sort) {
     const [field, sortOpt] = sort?.split(":");
     sort = {
-      [field]: sortOpt
+      [field]: Number(sortOpt)
     };
   }
   const filterOpts = filterOptions.length ? {
@@ -498,6 +498,73 @@ const isFileRequest = req => {
   const accept = req.accepts()[0];
   return accept !== _enums.mimeTypes.json;
 };
+const dbEvents = {
+  fetch: async ({
+    schemaName,
+    filter = {},
+    select,
+    page = 1,
+    limit = 0,
+    populateOptions = [],
+    sortOptions = "-timestamps"
+  }) => {
+    let [data, dataCount] = await Promise.all([schemaName.find(filter).populate(populateOptions).select(select).sort(sortOptions).skip((page - 1) * limit).limit(limit), schemaName.find(filter).populate(populateOptions).sort(sortOptions).countDocuments()]);
+    data = {
+      data,
+      paging: {
+        totalCount: dataCount,
+        totalPages: limit === 0 ? 1 : Math.ceil(dataCount / limit),
+        currentPage: page
+      }
+    };
+    return data;
+  },
+  fetchOne: async ({
+    schemaName,
+    filter,
+    populateOptions = [],
+    select
+  }) => {
+    let data = await schemaName.findOne(filter).select(select).populate(populateOptions);
+    return data;
+  },
+  updateOne: async ({
+    schemaName,
+    filter,
+    data,
+    populateOptions = []
+  }) => {
+    let updatedData = await schemaName.findOneAndUpdate(filter, data, {
+      new: true,
+      upsert: true,
+      omitUndefined: true
+    }).populate(populateOptions).lean();
+    return updatedData;
+  },
+  update: async ({
+    schemaName,
+    filter,
+    data,
+    populateOptions = []
+  }) => {
+    let updatedData = await schemaName.updateMany(filter, data, {
+      new: true,
+      upsert: true,
+      omitUndefined: true
+    }).populate(populateOptions).lean();
+    return updatedData;
+  },
+  delete: async (schemaName, filter) => {
+    let item = await schemaName.update(filter, {
+      isDeleted: true,
+      isActive: false
+    }, {
+      omitUndefined: true,
+      setDefaultsOnInsert: false
+    });
+    return item;
+  }
+};
 var _default = {
   responseTransformer,
   wrapper,
@@ -511,6 +578,7 @@ var _default = {
   getPayloadFromRoute,
   getCreatePayloadFromRoute,
   buildQuery,
-  isFileRequest
+  isFileRequest,
+  dbEvents
 };
 exports.default = _default;
