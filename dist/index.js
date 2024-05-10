@@ -107,7 +107,8 @@ class framework {
     stream,
     fileName,
     sheets,
-    settings
+    settings,
+    returnBuffer
   }) {
     if (!reportType) {
       throw new Error('Set Export Type');
@@ -119,7 +120,8 @@ class framework {
       fileName,
       stream,
       sheets,
-      settings
+      settings,
+      returnBuffer
     });
   }
 }

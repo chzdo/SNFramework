@@ -28,7 +28,7 @@ function getTableOrSheetName({ name, workbook, isSheetName = true }) {
 }
 const operations = { "Mul": "*", "Add": "+", "Sub": "-", "Div": "/" };
 
-const writeExcelSheet = async function ({ title = "main", rows, columns, name, workbook, tableName }) {
+const writeExcelSheet = async function ({ title = "main", rows, columns, name, workbook, tableName, returnBuffer = false }) {
     workbook = workbook || new ExcelJS.Workbook();
     name = name || title.replace(sheetName, '');
     name = getTableOrSheetName({ name, workbook })
@@ -39,10 +39,14 @@ const writeExcelSheet = async function ({ title = "main", rows, columns, name, w
     tableName = getTableOrSheetName({ name: tableName, workbook, isSheetName: false });
     let excelColumns = [];
     const firstRow = rows[0] || {};
-    const keys = Object.keys(firstRow);
+    // const keys = Object.keys(firstRow);
+    const keys = []
     for (const column in columns) {
-        if (!keys.includes(column)) {
-            keys.push(column);
+        const details = columns[column]
+        if (typeof details.keyOrder !== "undefined") {
+            keys[details.keyOrder] = column
+        } else {
+            keys.push(column)
         }
     }
     let colFormats = [];
@@ -124,16 +128,21 @@ const format = {
     }
 }
 
-const toExcelFile = async function ({ title, sheets, fileName, stream }) {
+const toExcelFile = async function ({ title, sheets, fileName, stream, returnBuffer = false }) {
     const workbook = new ExcelJS.Workbook();
     for (const sheetDetail of sheets) {
         await writeExcelSheet({ title, ...sheetDetail, workbook });
     }
     if (stream) {
-        stream.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        stream.set('Content-Disposition', `inline; filename="${fileName}.xlsx"`);
+        if (typeof stream.set === "function") {
+            stream.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            stream.set('Content-Disposition', `inline; filename="${fileName}.xlsx"`);
+        }
         await workbook.xlsx.write(stream);
     } else {
+        if (returnBuffer) {
+            return await workbook.xlsx.writeBuffer()
+        }
         fileName = `./${title || fileName}.xlsx`;
         await workbook.xlsx.writeFile(fileName);
         return fileName;
@@ -258,13 +267,14 @@ const handlers = {
 }
 
 
-const getFile = async function ({ reportType = defaultFileType, title, fileName, stream, sheets, settings }) {
+const getFile = async function ({ reportType = defaultFileType, title, fileName, stream, sheets, settings, returnBuffer }) {
     const reportHandler = handlers[reportType]
     if (typeof reportHandler !== "function") {
         console.log(`handler not defined for ${reportType}`)
         return
     }
-    await reportHandler({ reportType, title, sheets, stream, settings, fileName })
+
+    return await reportHandler({ reportType, title, sheets, stream, settings, fileName, returnBuffer })
 }
 
 

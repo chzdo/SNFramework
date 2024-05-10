@@ -63,11 +63,11 @@ class framework {
         return UploadFile
     }
 
-    export({ config, reportType, title, stream, fileName, sheets, settings }) {
+    export({ config, reportType, title, stream, fileName, sheets, settings, returnBuffer }) {
         if (!reportType) {
             throw new Error('Set Export Type')
         }
-        return getFile({ config, reportType, title, fileName, stream, sheets, settings })
+        return getFile({ config, reportType, title, fileName, stream, sheets, settings, returnBuffer })
     }
 }
 

@@ -55,25 +55,30 @@ class Mailer {
   async sendMail({
     from = this.FROM,
     subject,
+    html,
     templateName,
     tags = {},
     to = [],
     attachments = [],
-    recipientVariable = {}
+    recipientVariable = {},
+    cc = []
   }) {
     let {
       subject: subjectTemplate,
       body
-    } = await this.getTemplates(templateName);
+    } = html ? {} : await this.getTemplates(templateName);
     subject = subject || subjectTemplate;
     let finalTags = {
       ...tags
     };
-    if (this.useHandleBars) {
+    if (this.useHandleBars && !html) {
+      if (!Object.keys(tags).length) {
+        tags = new Map();
+      }
       finalTags = Object.fromEntries(tags);
       body = body(Object.fromEntries(tags));
     } else {
-      body = this.replaceTags(body, finalTags);
+      body = this.replaceTags(html || body, finalTags);
     }
     if (!ENV) {
       to = TEST_EMAIL;
@@ -83,12 +88,13 @@ class Mailer {
         email: TEST_EMAIL
       };
     }
-    const send = this.#mailer.sendMail({
+    const send = await this.#mailer.sendMail({
       from,
       subject: this.replaceTags(subject, finalTags),
       to: !ENV ? TEST_EMAIL : to,
       html: body,
       attachments,
+      cc,
       'recipient-variables': JSON.stringify(recipientVariable)
     });
     if (!send) {
