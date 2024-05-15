@@ -8,7 +8,7 @@ var _express = _interopRequireDefault(require("express"));
 var _expressFileupload = _interopRequireDefault(require("express-fileupload"));
 var _cloudinary = _interopRequireDefault(require("cloudinary"));
 var _streamifier = _interopRequireDefault(require("streamifier"));
-var _storageBlob = require("@azure/storage-blob");
+var _storageBlob = _interopRequireDefault(require("@azure/storage-blob"));
 var _index = _interopRequireDefault(require("../utils/index.js"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 const Router = _express.default.Router();
@@ -111,7 +111,7 @@ const UploadFile = {
       _cloudinary.default.config(options);
       this.selectedService = cloudUpload;
     } else {
-      azure = new _storageBlob.BlobServiceClient(options.url).getContainerClient(options.container);
+      azure = new _storageBlob.default.BlobServiceClient(options.url).getContainerClient(options.container);
       this.selectedService = azureUpload;
     }
     return this;

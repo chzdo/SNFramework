@@ -63,14 +63,33 @@ framework.setMG({
     models
 })
 
-
-
-
-
-app.all("/", [framework.appAuth.setup({
+const auth = framework.appAuth.setup({
     finratusAPI: process.env.FINRATUS_API
-}).auth], async (req, res) => {
-    res.send(req.user)
+})
+
+app.use(auth.setLicense("Payroll"))
+
+
+app.all("/", [auth.auth, auth.hasLicense], async (req, res) => {
+
+    const result = await framework.myxalary.filterLicenses(req.user.companyID, [
+        {
+            id: "662554b73799cfbd24684917",
+            name: "test"
+        },
+        {
+            id: "6565eaf886b8704d104e313c",
+            name: "test 2"
+        }
+    ], req.license)
+
+    if (result) {
+        //This means there was an Error with atleast one Employee
+        console.log(result)
+    }
+
+    //No Error All Employees Have License
+    res.send(result)
 })
 
 const router = express.Router();
@@ -116,9 +135,10 @@ app.use("/", companyController.registerRoutes({}));
 // console.log(await user.findAll({ query: {}, page: 3, limit: 70 }))
 
 
+
+
 app.all("/excel", [framework.appAuth.setup({
-    finratusAPI: process.env.FINRATUS_API
-}).auth], (req, res) => {
+}).auth,], (req, res) => {
     const excelSheets = [
         {
             title: 'Overview',

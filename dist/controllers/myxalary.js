@@ -101,6 +101,7 @@ const myxalaryController = {
         companyID: 1,
         employeeEmail: 1,
         profileImgUrl: 1,
+        companyLicense: 1,
         isAdmin: 1,
         myx3ID: 1,
         gender: 1,
@@ -146,6 +147,43 @@ const myxalaryController = {
         as: "employeeCadreStep"
       }
     }, {
+      $lookup: {
+        from: "licensev2",
+        let: {
+          lid: "$companyLicense.licenseId"
+        },
+        pipeline: [{
+          $match: {
+            $expr: {
+              $eq: ["$_id", "$$lid"]
+            }
+          }
+        }, {
+          $addFields: {
+            licensePackageID: {
+              $toObjectId: "$licensePackageID"
+            }
+          }
+        }, {
+          $lookup: {
+            from: "licenselists",
+            localField: "licensePackageID",
+            foreignField: "_id",
+            as: "licensePackageID"
+          }
+        }, {
+          $unwind: "$licensePackageID"
+        }, {
+          $project: {
+            "licensePackageID.modules": 1,
+            "licensePackageID._id": 1,
+            "name": 1,
+            "currentExpiry": 1
+          }
+        }],
+        as: "companyLicense2"
+      }
+    }, {
       $addFields: {
         employeeCadreStep: {
           $arrayElemAt: ["$employeeCadreStep", 0]
@@ -159,12 +197,37 @@ const myxalaryController = {
         employeeCadre: {
           $arrayElemAt: ["$employeeCadre", 0]
         },
-        salaryScheme: {
-          $arrayElemAt: ["$salaryScheme", 0]
+        "companyLicense.licenseId": {
+          $arrayElemAt: ["$companyLicense2", 0]
         }
       }
     }]).toArray();
     return users;
+  },
+  filterLicenses: async (companyID, employees, module) => {
+    const ids = employees.map(v => new _mongoose.Types.ObjectId(v.id));
+    const all = await myxalaryController.getMyxalaryEmployees(new _mongoose.Types.ObjectId(companyID), {
+      _id: {
+        $in: ids
+      }
+    });
+    if (!all.length) {
+      return "No Employees Found";
+    }
+    for (let item of employees) {
+      const found = all.find(v => v._id.toString() == item.id);
+      if (!found) {
+        return `Employee with ID - ${item} not found`;
+      }
+      const modules = found.companyLicense?.licenseId?.licensePackageID?.modules;
+      if (!modules) {
+        return `No License Found For ${found.firstName} ${found.lastName}`;
+      }
+      if (!modules[module]) {
+        return `No  ${module} License Found For ${found.firstName} ${found.lastName}`;
+      }
+    }
+    return;
   }
 };
 var _default = myxalaryController;

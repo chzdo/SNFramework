@@ -197,6 +197,43 @@ const handleEmployeeAuth = async ({
       preserveNullAndEmptyArrays: true
     }
   }, {
+    $lookup: {
+      from: "licensev2",
+      let: {
+        lid: "$companyLicense.licenseId"
+      },
+      pipeline: [{
+        $match: {
+          $expr: {
+            $eq: ["$_id", "$$lid"]
+          }
+        }
+      }, {
+        $addFields: {
+          licensePackageID: {
+            $toObjectId: "$licensePackageID"
+          }
+        }
+      }, {
+        $lookup: {
+          from: "licenselists",
+          localField: "licensePackageID",
+          foreignField: "_id",
+          as: "licensePackageID"
+        }
+      }, {
+        $unwind: "$licensePackageID"
+      }, {
+        $project: {
+          "licensePackageID.modules": 1,
+          "licensePackageID._id": 1,
+          "name": 1,
+          "currentExpiry": 1
+        }
+      }],
+      as: "companyLicense2"
+    }
+  }, {
     $unwind:
     /**
      * path: Path to the array field.
@@ -426,6 +463,9 @@ const handleEmployeeAuth = async ({
       },
       employeeManager: {
         $arrayElemAt: ["$employeeManager", 0]
+      },
+      "companyLicense.licenseId": {
+        $arrayElemAt: ["$companyLicense2", 0]
       }
     }
   }]).toArray();
@@ -660,6 +700,13 @@ const Authentication_Authorization = {
         }
         next();
       },
+      setLicense: module => {
+        if (!module) throw new Error("Set License");
+        return (req, res, next) => {
+          req.license = module;
+          next();
+        };
+      },
       isAdmin: async function (req, res, next) {
         if (!req.user.isAdmin) {
           return res.status(FORBIDDEN.CODE).json({
@@ -742,6 +789,25 @@ const Authentication_Authorization = {
             code: FORBIDDEN.CODE,
             statusCode: FORBIDDEN.CODE,
             error: FORBIDDEN.MESSAGE
+          });
+        }
+        next();
+      },
+      hasLicense: async function (req, res, next) {
+        if (!req.user.isEmployee) return next();
+        if (!req.user?.companyLicense?.licenseId?.licensePackageID?.modules) {
+          return res.status(FORBIDDEN.CODE).json({
+            code: FORBIDDEN.CODE,
+            statusCode: FORBIDDEN.CODE,
+            error: `No License Found`
+          });
+        }
+        const modules = req.user.companyLicense.licenseId.licensePackageID.modules;
+        if (!modules[req.license]) {
+          return res.status(FORBIDDEN.CODE).json({
+            code: FORBIDDEN.CODE,
+            statusCode: FORBIDDEN.CODE,
+            error: `No License Found For ${req.license}`
           });
         }
         next();
