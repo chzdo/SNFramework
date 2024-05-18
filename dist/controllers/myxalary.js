@@ -228,6 +228,31 @@ const myxalaryController = {
       }
     }
     return;
+  },
+  getFilteredLicenses: async (companyID, employees, module) => {
+    const ids = employees.map(v => new _mongoose.Types.ObjectId(v.id));
+    const all = await myxalaryController.getMyxalaryEmployees(new _mongoose.Types.ObjectId(companyID), {
+      _id: {
+        $in: ids
+      }
+    });
+    if (!all.length) {
+      return [];
+    }
+    return employees.filter(item => {
+      const found = all.find(v => v._id.toString() == item.id);
+      if (!found) {
+        return false;
+      }
+      const modules = found.companyLicense?.licenseId?.licensePackageID?.modules;
+      if (!modules) {
+        return false;
+      }
+      if (!modules[module]) {
+        return false;
+      }
+      return true;
+    });
   }
 };
 var _default = myxalaryController;
