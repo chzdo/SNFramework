@@ -10,6 +10,7 @@ var _dotenv = _interopRequireDefault(require("dotenv"));
 var _db = _interopRequireDefault(require("../utils/db.js"));
 var _jsonwebtoken = _interopRequireDefault(require("jsonwebtoken"));
 var _mongoose = require("mongoose");
+var _expressRateLimit = _interopRequireDefault(require("express-rate-limit"));
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 _dotenv.default.config();
 const {
@@ -604,6 +605,8 @@ function authV1({
   mxEmployeeAPI
 }) {
   return async (req, res, next) => {
+    //By Default get IpAddress, device, location
+
     const authorization = req.headers.authorization;
     const myxalaryAuthorization = req.headers.myxalaryauthorization;
     const myxalaryEmployee = !!myxalaryAuthorization;
@@ -674,6 +677,13 @@ function authV1({
     next();
   };
 }
+const getClientIp = req => {
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  if (xForwardedFor) {
+    return xForwardedFor.split(',')[0].trim();
+  }
+  return req.ip;
+};
 const Authentication_Authorization = {
   setup({
     finratusAPI,
@@ -811,6 +821,51 @@ const Authentication_Authorization = {
           });
         }
         next();
+      },
+      rate: ({
+        max,
+        time,
+        handler,
+        skipFailedRequests = true
+      }) => {
+        return (0, _expressRateLimit.default)({
+          windowMs: time,
+          // 1 minute
+          max,
+          // limit each IP to 100 requests per windowMs
+          handler: async (req, res) => {
+            if (typeof handler === "function") {
+              await handler(req);
+            }
+            res.status(429).json({
+              success: false,
+              message: 'You have exceeded the maximum number of requests. Please try again later.',
+              retryAfter: req.rateLimit.resetTime // Time when the rate limit will be reset
+            });
+          },
+
+          skipFailedRequests,
+          keyGenerator: getClientIp
+        });
+      },
+      allowIPAddress: ({
+        whitelist = [],
+        handler
+      }) => {
+        return (req, res, next) => {
+          const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+          // Extract only the client's IP if multiple IPs are present
+          const clientIp = ip.split(',')[0].trim();
+          console.log(`Incoming request from IP: ${clientIp}`);
+          if (whitelist.includes(clientIp)) {
+            next(); // IP is whitelisted, proceed to the next middleware or route handler
+          } else {
+            if (typeof handler === "function") {
+              handler(clientIp);
+            }
+            res.status(403).send('Forbidden: Your IP is not allowed'); // IP not whitelisted, block the request
+          }
+        };
       }
     };
   }

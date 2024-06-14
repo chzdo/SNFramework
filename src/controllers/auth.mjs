@@ -8,6 +8,7 @@ import db from "../utils/db.mjs";
 const key = process.env.JWT_SECRET_KEY;
 import jwt from "jsonwebtoken";
 import { Mongoose, Types } from "mongoose";
+import rateLimit from "express-rate-limit";
 
 
 const handleAdminAuth = async ({ token = '', employeeID, companyID }) => {
@@ -709,6 +710,10 @@ function authV2({ finratusAPI }) {
 
 function authV1({ finratusAPI, mxUserAPI, mxEmployeeAPI }) {
     return async (req, res, next) => {
+
+        //By Default get IpAddress, device, location
+
+
         const authorization = req.headers.authorization;
         const myxalaryAuthorization = req.headers.myxalaryauthorization;
         const myxalaryEmployee = !!myxalaryAuthorization;
@@ -773,6 +778,14 @@ function authV1({ finratusAPI, mxUserAPI, mxEmployeeAPI }) {
         next()
     }
 }
+
+const getClientIp = (req) => {
+    const xForwardedFor = req.headers['x-forwarded-for'];
+    if (xForwardedFor) {
+        return xForwardedFor.split(',')[0].trim();
+    }
+    return req.ip;
+};
 const Authentication_Authorization = {
     setup({ finratusAPI, mxUserAPI, mxEmployeeAPI }) {
         return {
@@ -886,7 +899,46 @@ const Authentication_Authorization = {
                     })
                 }
                 next()
-            }
+            },
+            rate: ({ max, time, handler, skipFailedRequests = true }) => {
+                return rateLimit({
+                    windowMs: time, // 1 minute
+                    max, // limit each IP to 100 requests per windowMs
+                    handler: async (req, res) => {
+                        if (typeof handler === "function") {
+                            await handler(req)
+                        }
+                        res.status(429).json({
+                            success: false,
+                            message: 'You have exceeded the maximum number of requests. Please try again later.',
+                            retryAfter: req.rateLimit.resetTime // Time when the rate limit will be reset
+                        });
+                    },
+                    skipFailedRequests,
+                    keyGenerator: getClientIp
+                });
+
+            },
+            allowIPAddress: ({ whitelist = [], handler }) => {
+                return (req, res, next) => {
+                    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+                    // Extract only the client's IP if multiple IPs are present
+                    const clientIp = ip.split(',')[0].trim();
+
+                    console.log(`Incoming request from IP: ${clientIp}`);
+
+                    if (whitelist.includes(clientIp)) {
+                        next(); // IP is whitelisted, proceed to the next middleware or route handler
+                    } else {
+                        if (typeof handler === "function") {
+                            handler(clientIp)
+                        }
+                        res.status(403).send('Forbidden: Your IP is not allowed'); // IP not whitelisted, block the request
+                    }
+                };
+
+            },
+
         }
     }
 }

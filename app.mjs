@@ -8,7 +8,6 @@ config.config()
 console.log(`here`)
 import db from "./src/utils/db.mjs";
 import { Axios } from "axios";
-console.log(`here`)
 const app = express();
 
 
@@ -57,6 +56,7 @@ app.use(cors({}));
 app.use(express.json({}));
 app.use(express.urlencoded({}));
 app.use(framework.utils.responseTransformer);
+app.set("trust proxy", true)
 
 framework.setMG({
     url: "mongodb://127.0.0.1:27017/test",
@@ -67,7 +67,16 @@ const auth = framework.appAuth.setup({
     finratusAPI: process.env.FINRATUS_API
 })
 
-app.use(auth.setLicense("Payroll"))
+app.use(auth.setLicense("Payroll"));
+
+app.get("/test", [
+    auth.rate({
+        max: 5, time: 1 * 60 * 1000, handler: (req) => {
+            console.log(req.ip)
+        }
+    }), auth.allowIPAddress({ whitelist: ["192.0.0.1"] })], async (req, res) => {
+
+    })
 
 
 app.all("/", [auth.auth, auth.hasLicense], async (req, res) => {
@@ -188,7 +197,7 @@ app.all("/pdf", (req, res) => {
 })
 
 app.listen(3300, () => {
-    console.log(`db running`)
+    console.log(`db running`, 'http://localhost:3300')
 });
 
 //get routes for models
