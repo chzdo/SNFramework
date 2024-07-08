@@ -102,6 +102,7 @@ const myxalaryController = {
         employeeEmail: 1,
         profileImgUrl: 1,
         companyLicense: 1,
+        addonLicenses: 1,
         isAdmin: 1,
         myx3ID: 1,
         gender: 1,
@@ -184,6 +185,43 @@ const myxalaryController = {
         as: "companyLicense2"
       }
     }, {
+      $lookup: {
+        from: "licensev2",
+        let: {
+          lid: "$addonLicenses.licenseId"
+        },
+        pipeline: [{
+          $match: {
+            $expr: {
+              $eq: ["$_id", "$$lid"]
+            }
+          }
+        }, {
+          $addFields: {
+            licensePackageID: {
+              $toObjectId: "$licensePackageID"
+            }
+          }
+        }, {
+          $lookup: {
+            from: "licenselists",
+            localField: "licensePackageID",
+            foreignField: "_id",
+            as: "licensePackageID"
+          }
+        }, {
+          $unwind: "$licensePackageID"
+        }, {
+          $project: {
+            "licensePackageID.modules": 1,
+            "licensePackageID._id": 1,
+            "name": 1,
+            "currentExpiry": 1
+          }
+        }],
+        as: "addonLicenses2"
+      }
+    }, {
       $addFields: {
         employeeCadreStep: {
           $arrayElemAt: ["$employeeCadreStep", 0]
@@ -199,6 +237,9 @@ const myxalaryController = {
         },
         "companyLicense.licenseId": {
           $arrayElemAt: ["$companyLicense2", 0]
+        },
+        "addonLicenses.licenseId": {
+          $arrayElemAt: ["$addonLicenses2", 0]
         }
       }
     }]).toArray();
@@ -220,10 +261,12 @@ const myxalaryController = {
         return `Employee with ID - ${item} not found`;
       }
       const modules = found.companyLicense?.licenseId?.licensePackageID?.modules;
-      if (!modules) {
+      const addonModules = found?.addonLicenses[0]?.licenseId?.licensePackageID?.modules;
+      if (!modules && !addonModules) {
         return `No License Found For ${found.firstName} ${found.lastName}`;
       }
-      if (!modules[module]) {
+      const checkAddon = myxalaryController.checkAddonLicenses(found, module);
+      if (!modules[module] && !checkAddon) {
         return `No  ${module} License Found For ${found.firstName} ${found.lastName}`;
       }
     }
@@ -253,6 +296,17 @@ const myxalaryController = {
       }
       return true;
     });
+  },
+  checkAddonLicenses: (employee, module) => {
+    if (!employee.addonLicenses) return false;
+    for (let j = 0; j < employee.addonLicenses.length; j += 1) {
+      if (employee.addonLicenses[j].licenseId && employee.addonLicenses[j].licenseId._id && employee.addonLicenses[j].licenseId.licensePackageID) {
+        if (employee.addonLicenses[j].licenseId.licensePackageID.modules[module]) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 };
 var _default = myxalaryController;
