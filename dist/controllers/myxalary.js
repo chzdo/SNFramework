@@ -288,10 +288,12 @@ const myxalaryController = {
         return false;
       }
       const modules = found.companyLicense?.licenseId?.licensePackageID?.modules;
-      if (!modules) {
+      const addonModules = found?.addonLicenses[0]?.licenseId?.licensePackageID?.modules;
+      if (!modules && !addonModules) {
         return false;
       }
-      if (!modules[module]) {
+      const checkAddon = myxalaryController.checkAddonLicenses(found, module);
+      if (!modules[module] && !checkAddon) {
         return false;
       }
       return true;

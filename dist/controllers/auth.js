@@ -235,6 +235,43 @@ const handleEmployeeAuth = async ({
       as: "companyLicense2"
     }
   }, {
+    $lookup: {
+      from: "licensev2",
+      let: {
+        lid: "$addonLicenses.licenseId"
+      },
+      pipeline: [{
+        $match: {
+          $expr: {
+            $eq: ["$_id", "$$lid"]
+          }
+        }
+      }, {
+        $addFields: {
+          licensePackageID: {
+            $toObjectId: "$licensePackageID"
+          }
+        }
+      }, {
+        $lookup: {
+          from: "licenselists",
+          localField: "licensePackageID",
+          foreignField: "_id",
+          as: "licensePackageID"
+        }
+      }, {
+        $unwind: "$licensePackageID"
+      }, {
+        $project: {
+          "licensePackageID.modules": 1,
+          "licensePackageID._id": 1,
+          "name": 1,
+          "currentExpiry": 1
+        }
+      }],
+      as: "addonLicenses2"
+    }
+  }, {
     $unwind:
     /**
      * path: Path to the array field.
@@ -467,6 +504,9 @@ const handleEmployeeAuth = async ({
       },
       "companyLicense.licenseId": {
         $arrayElemAt: ["$companyLicense2", 0]
+      },
+      "addonLicenses.licenseId": {
+        $arrayElemAt: ["$addonLicenses2", 0]
       }
     }
   }]).toArray();
@@ -805,7 +845,7 @@ const Authentication_Authorization = {
       },
       hasLicense: async function (req, res, next) {
         if (!req.user.isEmployee) return next();
-        if (!req.user?.companyLicense?.licenseId?.licensePackageID?.modules) {
+        if (!req.user?.companyLicense?.licenseId?.licensePackageID?.modules && !req.user?.addonLicenses[0]?.licenseId?.licensePackageID?.modules) {
           return res.status(FORBIDDEN.CODE).json({
             code: FORBIDDEN.CODE,
             statusCode: FORBIDDEN.CODE,
@@ -813,7 +853,8 @@ const Authentication_Authorization = {
           });
         }
         const modules = req.user.companyLicense.licenseId.licensePackageID.modules;
-        if (!modules[req.license]) {
+        const checkAddon = checkAddonLicenses(req.user, req.license);
+        if (!modules[req.license] && !checkAddon) {
           return res.status(FORBIDDEN.CODE).json({
             code: FORBIDDEN.CODE,
             statusCode: FORBIDDEN.CODE,
@@ -869,6 +910,18 @@ const Authentication_Authorization = {
       }
     };
   }
+};
+
+const checkAddonLicenses = (employee, module) => {
+  if (!employee.addonLicenses) return false;
+  for (let j = 0; j < employee.addonLicenses.length; j += 1) {
+    if (employee.addonLicenses[j].licenseId && employee.addonLicenses[j].licenseId._id && employee.addonLicenses[j].licenseId.licensePackageID) {
+      if (employee.addonLicenses[j].licenseId.licensePackageID.modules[module]) {
+        return true;
+      }
+    }
+  }
+  return false;
 };
 var _default = Authentication_Authorization;
 exports.default = _default;
